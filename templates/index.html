@@ -414,8 +414,8 @@
             Active Scan Results
         </span>
         {% else %}
-        <span class="badge bg-secondary bg-opacity-25 text-muted px-2.5 py-1 border border-secondary border-opacity-25">
-            Demo Data
+        <span class="badge bg-success bg-opacity-25 text-success px-2.5 py-1 border border-success border-opacity-25">
+            <i class="bi bi-database-check me-1"></i> SQLite Persistence
         </span>
         {% endif %}
     </div>
@@ -474,54 +474,60 @@
             </div>
         </div>
         {% else %}
-        <!-- Metric Card 1: Total Scans -->
+        <!-- Metric Card 1: Total Saved Scans -->
         <div class="col-sm-6 col-xl-3">
             <div class="cyber-card p-3 d-flex align-items-center gap-3">
                 <div class="stat-icon-wrapper stat-icon-cyan">
-                    <i class="bi bi-radar"></i>
+                    <i class="bi bi-journal-text"></i>
                 </div>
                 <div>
-                    <div class="stat-number text-light">148</div>
-                    <p class="stat-label">Total Scans</p>
+                    <div class="stat-number text-light">{{ recent_scans | length if recent_scans else 0 }}</div>
+                    <p class="stat-label">Saved Scans</p>
                 </div>
             </div>
         </div>
 
-        <!-- Metric Card 2: Protected Hosts -->
+        <!-- Metric Card 2: Protected / Assessed Hosts -->
         <div class="col-sm-6 col-xl-3">
             <div class="cyber-card p-3 d-flex align-items-center gap-3">
                 <div class="stat-icon-wrapper stat-icon-green">
                     <i class="bi bi-shield-check"></i>
                 </div>
                 <div>
-                    <div class="stat-number text-light">32</div>
-                    <p class="stat-label">Protected Hosts</p>
+                    <div class="stat-number text-light">
+                        {% if recent_scans %}
+                            {{ recent_scans | map(attribute='target') | unique | list | length }}
+                        {% else %}
+                            0
+                        {% endif %}
+                    </div>
+                    <p class="stat-label">Unique Targets Assessed</p>
                 </div>
             </div>
         </div>
 
-        <!-- Metric Card 3: High Risk Findings -->
-        <div class="col-sm-6 col-xl-3">
-            <div class="cyber-card p-3 d-flex align-items-center gap-3">
-                <div class="stat-icon-wrapper stat-icon-red">
-                    <i class="bi bi-exclamation-triangle-fill"></i>
-                </div>
-                <div>
-                    <div class="stat-number text-light">7</div>
-                    <p class="stat-label">High Risk Findings</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Metric Card 4: Reports Generated -->
+        <!-- Metric Card 3: Storage Engine -->
         <div class="col-sm-6 col-xl-3">
             <div class="cyber-card p-3 d-flex align-items-center gap-3">
                 <div class="stat-icon-wrapper stat-icon-blue">
-                    <i class="bi bi-file-earmark-medical-fill"></i>
+                    <i class="bi bi-database"></i>
                 </div>
                 <div>
-                    <div class="stat-number text-light">94</div>
-                    <p class="stat-label">Reports Generated</p>
+                    <div class="stat-number text-light fs-5">SQLite 3</div>
+                    <p class="stat-label">Local Database Engine</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Metric Card 4: Assessment Engine Status -->
+        <div class="col-sm-6 col-xl-3">
+            <div class="cyber-card p-3 d-flex align-items-center gap-3">
+                <div class="stat-icon-wrapper stat-icon-green">
+                    <i class="bi bi-cpu"></i>
+                </div>
+                <div>
+                    <div class="stat-number text-light fs-5 text-success">Active</div>
+                    <p class="stat-label">Nmap Assessment Engine</p>
                 </div>
             </div>
         </div>
@@ -531,120 +537,115 @@
 
     <!-- 
       =============================================================================
-      5. RECENT SCANS TABLE (DEMO DATA)
-      PURPOSE: Lists demonstration assessment log history.
+      5. RECENT SCAN HISTORY TABLE (PERSISTENT SQLITE DATA)
+      PURPOSE: Lists saved historical target vulnerability scans and risk classifications.
       =============================================================================
     -->
     <div class="cyber-card p-4 mb-4">
         <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-4">
             <div>
                 <h5 class="card-title text-light mb-1 fw-bold">
-                    <i class="bi bi-activity text-info me-2"></i>Recent Assessment History
+                    <i class="bi bi-activity text-info me-2"></i>Recent Scan History
                 </h5>
-                <p class="text-muted small mb-0">Overview of recent target vulnerability scans and risk classifications.</p>
+                <p class="text-muted small mb-0">Overview of recent target vulnerability scans and risk classifications saved in SQLite database.</p>
             </div>
             <div>
                 <span class="badge bg-secondary bg-opacity-25 text-light px-3 py-2 border border-secondary border-opacity-25">
-                    <i class="bi bi-clock-history me-1"></i> Demo Log Data
+                    <i class="bi bi-clock-history me-1"></i> Real Saved Scans
                 </span>
             </div>
         </div>
 
+        {% if recent_scans and recent_scans | length > 0 %}
         <!-- Responsive Table Container -->
         <div class="table-responsive">
             <table class="table table-cyber align-middle mb-0">
                 <thead>
                     <tr>
                         <th scope="col">Target</th>
-                        <th scope="col">Date</th>
+                        <th scope="col">Date / Time</th>
                         <th scope="col">Status</th>
-                        <th scope="col">Risk</th>
+                        <th scope="col">Open Ports</th>
+                        <th scope="col">Findings</th>
+                        <th scope="col">Overall Risk</th>
+                        <th scope="col" class="text-end">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
+                    {% for scan in recent_scans %}
                     <tr>
                         <td>
                             <div class="d-flex align-items-center gap-2">
                                 <i class="bi bi-hdd-network text-info"></i>
-                                <span class="fw-semibold">192.168.1.105</span>
-                                <span class="text-muted small">(Internal Host)</span>
+                                <span class="fw-semibold text-light">{{ scan.target }}</span>
+                                {% if scan.hostname and scan.hostname != scan.target %}
+                                <span class="text-muted small">({{ scan.hostname }})</span>
+                                {% endif %}
                             </div>
                         </td>
-                        <td class="text-muted">2026-07-28 10:45</td>
+                        <td class="text-muted small">{{ scan.scan_started_at }}</td>
                         <td>
+                            {% if scan.host_status == 'up' %}
                             <span class="badge badge-status-completed rounded-pill px-2.5 py-1">
-                                <i class="bi bi-check-circle-fill me-1"></i>Completed
+                                <i class="bi bi-check-circle-fill me-1"></i>Up
                             </span>
+                            {% else %}
+                            <span class="badge bg-danger bg-opacity-25 text-danger rounded-pill px-2.5 py-1">
+                                <i class="bi bi-x-circle-fill me-1"></i>Down
+                            </span>
+                            {% endif %}
                         </td>
+                        <td class="fw-semibold text-info">{{ scan.open_port_count }}</td>
+                        <td class="fw-semibold text-light">{{ scan.finding_count }}</td>
                         <td>
+                            {% if scan.overall_risk == 'Critical' %}
+                            <span class="badge badge-risk-critical rounded-pill px-3 py-1">
+                                <i class="bi bi-exclamation-octagon-fill me-1"></i>Critical
+                            </span>
+                            {% elif scan.overall_risk == 'High' %}
                             <span class="badge badge-risk-high rounded-pill px-3 py-1">
-                                <i class="bi bi-shield-x me-1"></i>High Risk
+                                <i class="bi bi-shield-x me-1"></i>High
                             </span>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <div class="d-flex align-items-center gap-2">
-                                <i class="bi bi-globe text-info"></i>
-                                <span class="fw-semibold">scanme.nmap.org</span>
-                                <span class="text-muted small">(External Domain)</span>
-                            </div>
-                        </td>
-                        <td class="text-muted">2026-07-28 09:15</td>
-                        <td>
-                            <span class="badge badge-status-completed rounded-pill px-2.5 py-1">
-                                <i class="bi bi-check-circle-fill me-1"></i>Completed
-                            </span>
-                        </td>
-                        <td>
+                            {% elif scan.overall_risk == 'Medium' %}
                             <span class="badge badge-risk-medium rounded-pill px-3 py-1">
-                                <i class="bi bi-shield-exclamation me-1"></i>Medium Risk
+                                <i class="bi bi-shield-exclamation me-1"></i>Medium
                             </span>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <div class="d-flex align-items-center gap-2">
-                                <i class="bi bi-hdd-network text-info"></i>
-                                <span class="fw-semibold">10.0.0.1</span>
-                                <span class="text-muted small">(Gateway Router)</span>
-                            </div>
-                        </td>
-                        <td class="text-muted">2026-07-28 11:20</td>
-                        <td>
-                            <span class="badge badge-status-progress rounded-pill px-2.5 py-1">
-                                <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>In Progress
-                            </span>
-                        </td>
-                        <td>
-                            <span class="badge bg-secondary bg-opacity-25 text-muted rounded-pill px-3 py-1">
-                                Pending
-                            </span>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <div class="d-flex align-items-center gap-2">
-                                <i class="bi bi-laptop text-info"></i>
-                                <span class="fw-semibold">127.0.0.1</span>
-                                <span class="text-muted small">(Local Workstation)</span>
-                            </div>
-                        </td>
-                        <td class="text-muted">2026-07-27 16:30</td>
-                        <td>
-                            <span class="badge badge-status-completed rounded-pill px-2.5 py-1">
-                                <i class="bi bi-check-circle-fill me-1"></i>Completed
-                            </span>
-                        </td>
-                        <td>
+                            {% elif scan.overall_risk == 'Low' %}
                             <span class="badge badge-risk-low rounded-pill px-3 py-1">
-                                <i class="bi bi-shield-check me-1"></i>Low Risk
+                                <i class="bi bi-shield-check me-1"></i>Low
                             </span>
+                            {% else %}
+                            <span class="badge badge-risk-info rounded-pill px-3 py-1">
+                                <i class="bi bi-info-circle me-1"></i>Info
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            <div class="d-inline-flex gap-2">
+                                <a href="{{ url_for('view_scan', scan_id=scan.id) }}" class="btn btn-sm btn-outline-info rounded-pill px-3 py-1 fs-7 d-inline-flex align-items-center gap-1">
+                                    <i class="bi bi-eye"></i> View
+                                </a>
+                                <form action="{{ url_for('delete_scan_route', scan_id=scan.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete scan #{{ scan.id }} for target {{ scan.target }}?');">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-2.5 py-1 fs-7 d-inline-flex align-items-center gap-1">
+                                        <i class="bi bi-trash"></i> Delete
+                                    </button>
+                                </form>
+                            </div>
                         </td>
                     </tr>
+                    {% endfor %}
                 </tbody>
             </table>
         </div>
+        {% else %}
+        <div class="alert alert-secondary bg-dark border border-secondary text-light p-4 text-center rounded-3 mb-0">
+            <i class="bi bi-journal-x text-muted fs-2 d-block mb-2"></i>
+            <h6 class="fw-bold text-light">No saved scans yet</h6>
+            <p class="text-muted small mb-0">
+                Complete an authorized scan to create your first history record.
+            </p>
+        </div>
+        {% endif %}
     </div>
 
 </div>

@@ -1,31 +1,48 @@
 """
 =============================================================================
 SecureScan - Automated Vulnerability Assessment Platform
-Flask Application Tests: tests/test_app.py
+Flask Application Integration Tests: tests/test_app.py
 
 PURPOSE:
-Integration tests for Flask routes, target validation handling, authorization
-verification, mocked scan result rendering, and vulnerability analysis integration.
+Integration tests for Flask web routes, database persistence flow, target validation,
+authorization verification, mocked scan execution, saved scan viewing, and scan deletion.
 
 CRITICAL SECURITY RULE:
 All scanner engine calls are mocked using unittest.mock. No actual network
 scans are performed during execution of these automated tests.
+All database tests use isolated temporary SQLite files.
 =============================================================================
 """
 
+import os
+import tempfile
 import unittest
 from unittest.mock import patch
+
 from backend.app import app
+from database.db import initialize_database, save_scan
 from scanner.nmap_scanner import ScannerUnavailableError
 
 
 class TestFlaskRoutes(unittest.TestCase):
 
     def setUp(self):
-        """Configure test client for Flask application."""
+        """Configure test client and isolated temporary database for Flask application."""
+        self.temp_dir = tempfile.TemporaryDirectory()
+        self.db_path = os.path.join(self.temp_dir.name, "test_app_securescan.db")
+
         app.config["TESTING"] = True
         app.config["WTF_CSRF_ENABLED"] = False
+        app.config["DATABASE_PATH"] = self.db_path
+
+        # Initialize schema inside temporary DB
+        initialize_database(self.db_path)
+
         self.client = app.test_client()
+
+    def tearDown(self):
+        """Clean up temporary directory and database file."""
+        self.temp_dir.cleanup()
 
     def test_get_dashboard(self):
         """Verify GET / returns HTTP 200 and loads the dashboard HTML."""
@@ -33,6 +50,29 @@ class TestFlaskRoutes(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn(b"SecureScan", response.data)
         self.assertIn(b"Automated Vulnerability Assessment", response.data)
+
+    def test_get_dashboard_renders_recent_scans(self):
+        """Verify GET / displays real recent saved scans from SQLite."""
+        save_scan(
+            {
+                "target": "10.0.0.99",
+                "host_status": "up",
+                "hostname": "test-host.local",
+                "scan_started_at": "2026-07-28 10:00:00",
+                "open_port_count": 1,
+            },
+            {
+                "finding_count": 1,
+                "overall_risk": "Medium",
+            },
+            db_path=self.db_path,
+        )
+
+        response = self.client.get("/")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"10.0.0.99", response.data)
+        self.assertIn(b"test-host.local", response.data)
+        self.assertIn(b"Medium", response.data)
 
     def test_post_without_authorization(self):
         """Verify POST / without authorization checkbox agreement is rejected."""
@@ -67,7 +107,7 @@ class TestFlaskRoutes(unittest.TestCase):
 
     @patch("backend.app.run_scan")
     def test_post_successful_mocked_scan(self, mock_run_scan):
-        """Verify POST / with valid target and authorization renders mocked scan results and analysis."""
+        """Verify POST / with valid target and authorization renders mocked scan results and persists to DB."""
         mock_run_scan.return_value = {
             "target": "127.0.0.1",
             "resolved_addresses": ["127.0.0.1"],
@@ -188,6 +228,32 @@ class TestFlaskRoutes(unittest.TestCase):
         self.assertIn(b"Scan Results:", response.data)
         self.assertIn(b"Rule-based security analysis could not be completed", response.data)
 
+    @patch("backend.app.save_scan")
+    @patch("backend.app.run_scan")
+    def test_post_handles_database_save_failure_gracefully(self, mock_run_scan, mock_save_scan):
+        """Verify Flask displays scan results and flashes warning if saving scan fails."""
+        mock_run_scan.return_value = {
+            "target": "127.0.0.1",
+            "resolved_addresses": ["127.0.0.1"],
+            "host_status": "up",
+            "hostname": "localhost",
+            "scan_started_at": "2026-07-28 12:00:00",
+            "scan_duration_seconds": 1.0,
+            "open_ports": [],
+            "open_port_count": 0,
+        }
+        mock_save_scan.side_effect = RuntimeError("Database write error")
+
+        response = self.client.post(
+            "/",
+            data={"target": "127.0.0.1", "auth_confirmed": "1"},
+            follow_redirects=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"Scan Results:", response.data)
+        self.assertIn(b"The scan completed, but the result could not be saved to history.", response.data)
+
     @patch("backend.app.run_scan")
     def test_post_handles_scanner_unavailable(self, mock_run_scan):
         """Verify POST / gracefully handles ScannerUnavailableError when Nmap is missing."""
@@ -203,6 +269,61 @@ class TestFlaskRoutes(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertIn(b"Nmap is not installed or cannot be found", response.data)
+
+    def test_view_scan_detail_route_success(self):
+        """Verify GET /scans/<scan_id> loads saved scan details and returns HTTP 200."""
+        scan_id = save_scan(
+            {
+                "target": "scanme.nmap.org",
+                "host_status": "up",
+                "hostname": "scanme.nmap.org",
+                "resolved_addresses": ["45.33.32.156"],
+                "scan_started_at": "2026-07-28 14:00:00",
+                "scan_duration_seconds": 2.5,
+                "open_port_count": 1,
+                "open_ports": [{"port": 80, "protocol": "TCP", "state": "open", "service": "http", "product": "Apache", "version": "2.4.7"}],
+            },
+            {
+                "finding_count": 1,
+                "overall_risk": "Low",
+                "findings": [{"rule_id": "SS-HTTP-001", "title": "HTTP Service Exposed", "severity": "Low", "category": "Web Exposure", "port": 80, "protocol": "TCP", "service": "http", "product": "Apache", "version": "2.4.7", "description": "HTTP port open.", "evidence": "TCP/80 open", "recommendation": "Use HTTPS.", "confidence": "High"}],
+            },
+            db_path=self.db_path,
+        )
+
+        response = self.client.get(f"/scans/{scan_id}")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"Historical Scan Record", response.data)
+        self.assertIn(b"scanme.nmap.org", response.data)
+        self.assertIn(b"45.33.32.156", response.data)
+        self.assertIn(b"Apache", response.data)
+        self.assertIn(b"SS-HTTP-001", response.data)
+
+    def test_view_scan_detail_missing_id_returns_404(self):
+        """Verify GET /scans/<missing_id> returns HTTP 404."""
+        response = self.client.get("/scans/99999")
+        self.assertEqual(response.status_code, 404)
+
+    def test_delete_scan_route_requires_post(self):
+        """Verify GET /scans/<scan_id>/delete returns HTTP 405 Method Not Allowed."""
+        response = self.client.get("/scans/1/delete")
+        self.assertEqual(response.status_code, 405)
+
+    def test_delete_scan_route_removes_record_and_redirects(self):
+        """Verify POST /scans/<scan_id>/delete removes scan and redirects to dashboard."""
+        scan_id = save_scan(
+            {"target": "127.0.0.1", "scan_started_at": "2026-07-28"},
+            {},
+            db_path=self.db_path,
+        )
+
+        response = self.client.post(f"/scans/{scan_id}/delete", follow_redirects=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"successfully deleted", response.data)
+
+        # Confirm scan is deleted
+        detail_resp = self.client.get(f"/scans/{scan_id}")
+        self.assertEqual(detail_resp.status_code, 404)
 
 
 if __name__ == "__main__":

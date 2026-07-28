@@ -4,3 +4,11 @@ __pycache__/
 .env
 .vscode/
 .idea/
+
+# SQLite Database files
+database/*.db
+database/*.db-journal
+database/*.db-wal
+database/*.db-shm
+database/*.sqlite
+database/*.sqlite3

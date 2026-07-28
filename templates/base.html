@@ -110,6 +110,29 @@
       =============================================================================
     -->
     <main class="flex-grow-1">
+        <!-- FLASH MESSAGES DISPLAY CONTAINER -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="container-fluid px-4 pt-3">
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show bg-dark border border-{{ 'danger' if category == 'error' else category }} text-light rounded-3 p-3 mb-3 d-flex align-items-center justify-content-between" role="alert">
+                            <div class="d-flex align-items-center gap-2">
+                                {% if category in ['danger', 'error'] %}
+                                    <i class="bi bi-exclamation-octagon-fill text-danger fs-5"></i>
+                                {% elif category == 'warning' %}
+                                    <i class="bi bi-exclamation-triangle-fill text-warning fs-5"></i>
+                                {% else %}
+                                    <i class="bi bi-check-circle-fill text-success fs-5"></i>
+                                {% endif %}
+                                <span>{{ message }}</span>
+                            </div>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
         {% block content %}
         <!-- Child content renders here -->
         {% endblock %}

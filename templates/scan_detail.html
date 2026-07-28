@@ -1,0 +1,333 @@
+{% extends "base.html" %}
+
+{# 
+  =============================================================================
+  SecureScan - Automated Vulnerability Assessment Platform
+  Historical Scan Detail View: templates/scan_detail.html
+  
+  PURPOSE:
+  Displays detailed persistent assessment results for a previously conducted scan,
+  including metadata, open ports, rule-based findings, severity breakdown, and
+  remediation recommendations without re-executing network probes.
+  =============================================================================
+#}
+
+{% block title %}Scan Detail #{{ scan.id }} - {{ scan.target }} | SecureScan{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-3">
+
+    <!-- Back Navigation & Action Bar -->
+    <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-3 mb-4">
+        <div>
+            <a href="{{ url_for('home') }}" class="btn btn-outline-secondary btn-sm text-light rounded-pill px-3 py-1.5">
+                <i class="bi bi-arrow-left me-1"></i> Back to Dashboard
+            </a>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <span class="badge bg-secondary bg-opacity-25 text-light border border-secondary border-opacity-25 px-3 py-2 fs-7">
+                <i class="bi bi-hdd-network me-1"></i> Saved Scan ID #{{ scan.id }}
+            </span>
+            <!-- Delete Scan Button triggering Modal -->
+            <button type="button" class="btn btn-outline-danger btn-sm rounded-pill px-3 py-1.5" data-bs-toggle="modal" data-bs-target="#deleteScanModal">
+                <i class="bi bi-trash me-1"></i> Delete Scan
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Detail Card -->
+    <div class="row justify-content-center mb-5">
+        <div class="col-lg-11 col-xl-10">
+            <div class="cyber-card p-4 border-info border-opacity-50">
+                
+                <!-- Header Banner -->
+                <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4 border-bottom border-secondary border-opacity-25 pb-3">
+                    <div>
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                            <span class="badge bg-primary bg-opacity-25 text-info border border-info border-opacity-25 px-2.5 py-1">
+                                <i class="bi bi-clock-history me-1"></i> Historical Scan Record
+                            </span>
+                            <span class="text-muted small">| Executed: {{ scan.scan_started_at }}</span>
+                        </div>
+                        <h3 class="text-light fw-bold mb-0">
+                            Historical Scan: <span class="text-info">{{ scan.target }}</span>
+                        </h3>
+                    </div>
+                    <div class="text-md-end">
+                        <span class="badge bg-dark border border-secondary text-light px-3 py-2 fs-7">
+                            <i class="bi bi-stopwatch text-info me-1"></i> Duration: {{ scan.scan_duration_seconds }}s
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Metrics Grid -->
+                <div class="row g-3 mb-4">
+                    <!-- Host Status -->
+                    <div class="col-sm-6 col-md-3">
+                        <div class="bg-dark p-3 rounded-3 border border-secondary border-opacity-25">
+                            <span class="text-muted small d-block mb-1">Host Status</span>
+                            {% if scan.host_status == 'up' %}
+                            <span class="badge badge-status-completed px-2.5 py-1 fs-6">
+                                <i class="bi bi-arrow-up-circle-fill me-1"></i> Host Up
+                            </span>
+                            {% else %}
+                            <span class="badge bg-danger bg-opacity-25 text-danger px-2.5 py-1 fs-6">
+                                <i class="bi bi-arrow-down-circle-fill me-1"></i> Host Down / Unreachable
+                            </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <!-- Resolved Address -->
+                    <div class="col-sm-6 col-md-3">
+                        <div class="bg-dark p-3 rounded-3 border border-secondary border-opacity-25">
+                            <span class="text-muted small d-block mb-1">Resolved Address</span>
+                            <span class="fw-bold text-light fs-6">
+                                {{ scan.resolved_address if scan.resolved_address else 'N/A' }}
+                            </span>
+                        </div>
+                    </div>
+                    <!-- Hostname -->
+                    <div class="col-sm-6 col-md-3">
+                        <div class="bg-dark p-3 rounded-3 border border-secondary border-opacity-25">
+                            <span class="text-muted small d-block mb-1">Hostname</span>
+                            <span class="fw-bold text-light fs-6 text-truncate d-block">
+                                {{ scan.hostname if scan.hostname else 'N/A' }}
+                            </span>
+                        </div>
+                    </div>
+                    <!-- Open Port Count -->
+                    <div class="col-sm-6 col-md-3">
+                        <div class="bg-dark p-3 rounded-3 border border-secondary border-opacity-25">
+                            <span class="text-muted small d-block mb-1">Open Ports Detected</span>
+                            <span class="fw-bold text-info fs-5">
+                                {{ scan.open_port_count }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Discovered Open Ports Section -->
+                <h5 class="text-light fw-bold mb-3">
+                    <i class="bi bi-list-nested text-info me-2"></i>Discovered Services (Open Ports)
+                </h5>
+
+                {% if scan.open_ports and scan.open_ports | length > 0 %}
+                <div class="table-responsive mb-4">
+                    <table class="table table-cyber align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th scope="col">Port</th>
+                                <th scope="col">Protocol</th>
+                                <th scope="col">State</th>
+                                <th scope="col">Service</th>
+                                <th scope="col">Product</th>
+                                <th scope="col">Version</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for port_item in scan.open_ports %}
+                            <tr>
+                                <td class="fw-bold text-cyan">{{ port_item.port }}</td>
+                                <td><span class="badge bg-secondary bg-opacity-25 text-light fs-7">{{ port_item.protocol }}</span></td>
+                                <td>
+                                    <span class="badge badge-status-completed rounded-pill px-2.5 py-1">
+                                        <i class="bi bi-check-circle-fill me-1"></i>{{ port_item.state }}
+                                    </span>
+                                </td>
+                                <td class="fw-medium text-light">{{ port_item.service }}</td>
+                                <td class="text-muted">{{ port_item.product if port_item.product else '—' }}</td>
+                                <td class="text-muted">{{ port_item.version if port_item.version else '—' }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="alert alert-secondary bg-dark border border-secondary text-light p-4 text-center rounded-3 mb-4">
+                    <i class="bi bi-info-circle text-info fs-3 d-block mb-2"></i>
+                    <h6 class="fw-bold text-light">No Open Ports Discovered</h6>
+                    <p class="text-muted small mb-0">
+                        No open ports were recorded for this historical assessment.
+                    </p>
+                </div>
+                {% endif %}
+
+                <!-- Security Scope Disclaimer -->
+                <div class="alert alert-warning bg-warning bg-opacity-10 border border-warning border-opacity-25 text-warning-emphasis rounded-3 p-3 mb-4 d-flex align-items-center gap-2">
+                    <i class="bi bi-shield-exclamation text-warning fs-5 flex-shrink-0"></i>
+                    <span class="small text-light">
+                        <strong class="text-warning">Assessment Disclaimer:</strong> This historical scan reflects network state at scan time. Common TCP ports were probed under limited parameters.
+                    </span>
+                </div>
+
+                <!-- Security Analysis Section -->
+                <div class="mt-4 pt-4 border-top border-secondary border-opacity-25">
+                    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+                        <div>
+                            <h5 class="text-light fw-bold mb-1">
+                                <i class="bi bi-shield-lock text-info me-2"></i>Rule-Based Security Analysis
+                            </h5>
+                            <p class="text-muted small mb-0">Saved vulnerability findings and risk classifications.</p>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="text-muted small">Overall Target Risk:</span>
+                            {% if scan.overall_risk == 'Critical' %}
+                            <span class="badge badge-risk-critical px-3 py-2 fs-6 rounded-pill">
+                                <i class="bi bi-exclamation-octagon-fill me-1"></i>Critical Risk
+                            </span>
+                            {% elif scan.overall_risk == 'High' %}
+                            <span class="badge badge-risk-high px-3 py-2 fs-6 rounded-pill">
+                                <i class="bi bi-shield-x me-1"></i>High Risk
+                            </span>
+                            {% elif scan.overall_risk == 'Medium' %}
+                            <span class="badge badge-risk-medium px-3 py-2 fs-6 rounded-pill">
+                                <i class="bi bi-shield-exclamation me-1"></i>Medium Risk
+                            </span>
+                            {% elif scan.overall_risk == 'Low' %}
+                            <span class="badge badge-risk-low px-3 py-2 fs-6 rounded-pill">
+                                <i class="bi bi-shield-check me-1"></i>Low Risk
+                            </span>
+                            {% else %}
+                            <span class="badge badge-risk-info px-3 py-2 fs-6 rounded-pill">
+                                <i class="bi bi-info-circle me-1"></i>Info / Minimal Risk
+                            </span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Severity Metric Breakdown -->
+                    <div class="row g-2 mb-4">
+                        <div class="col">
+                            <div class="bg-dark p-2 text-center rounded-3 border border-secondary border-opacity-25">
+                                <span class="d-block text-muted fs-7 fw-semibold">Critical</span>
+                                <span class="fw-bold fs-5 text-danger">{{ scan.severity_counts.Critical }}</span>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="bg-dark p-2 text-center rounded-3 border border-secondary border-opacity-25">
+                                <span class="d-block text-muted fs-7 fw-semibold">High</span>
+                                <span class="fw-bold fs-5 text-warning">{{ scan.severity_counts.High }}</span>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="bg-dark p-2 text-center rounded-3 border border-secondary border-opacity-25">
+                                <span class="d-block text-muted fs-7 fw-semibold">Medium</span>
+                                <span class="fw-bold fs-5" style="color: #f59e0b;">{{ scan.severity_counts.Medium }}</span>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="bg-dark p-2 text-center rounded-3 border border-secondary border-opacity-25">
+                                <span class="d-block text-muted fs-7 fw-semibold">Low</span>
+                                <span class="fw-bold fs-5 text-info">{{ scan.severity_counts.Low }}</span>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="bg-dark p-2 text-center rounded-3 border border-secondary border-opacity-25">
+                                <span class="d-block text-muted fs-7 fw-semibold">Info</span>
+                                <span class="fw-bold fs-5 text-secondary">{{ scan.severity_counts.Info }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Findings List -->
+                    {% if scan.findings and scan.findings | length > 0 %}
+                    <div class="d-flex flex-column gap-3 mb-4">
+                        {% for finding in scan.findings %}
+                        <div class="finding-card finding-card-{{ finding.severity | lower }}">
+                            <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-start gap-2 mb-2">
+                                <div>
+                                    <div class="d-flex align-items-center gap-2 mb-1">
+                                        <span class="badge bg-secondary bg-opacity-25 text-light border border-secondary border-opacity-25 fs-7">{{ finding.rule_id }}</span>
+                                        {% if finding.category %}
+                                        <span class="badge bg-dark text-info border border-info border-opacity-25 fs-7">{{ finding.category }}</span>
+                                        {% endif %}
+                                        <span class="badge bg-dark text-light border border-secondary border-opacity-25 fs-7">Port {{ finding.port }}/{{ finding.protocol }}</span>
+                                    </div>
+                                    <h6 class="text-light fw-bold mb-0 fs-6">{{ finding.title }}</h6>
+                                </div>
+                                <div class="d-flex align-items-center gap-2">
+                                    {% if finding.severity == 'Critical' %}
+                                    <span class="badge bg-danger text-light px-2.5 py-1">Critical Severity</span>
+                                    {% elif finding.severity == 'High' %}
+                                    <span class="badge bg-danger bg-opacity-75 text-light px-2.5 py-1">High Severity</span>
+                                    {% elif finding.severity == 'Medium' %}
+                                    <span class="badge bg-warning text-dark px-2.5 py-1">Medium Severity</span>
+                                    {% elif finding.severity == 'Low' %}
+                                    <span class="badge bg-primary bg-opacity-75 text-light px-2.5 py-1">Low Severity</span>
+                                    {% else %}
+                                    <span class="badge bg-info bg-opacity-50 text-light px-2.5 py-1">Info</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <p class="text-light-50 small mb-3">{{ finding.description }}</p>
+                            <div class="row g-2 mb-2">
+                                <div class="col-md-6">
+                                    <div class="evidence-box">
+                                        <div class="text-muted fs-8 fw-semibold text-uppercase mb-1">Evidence Recorded</div>
+                                        <div>{{ finding.evidence }}</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="recommendation-box">
+                                        <div class="text-success fs-8 fw-semibold text-uppercase mb-1"><i class="bi bi-shield-check me-1"></i>Recommendation</div>
+                                        <div>{{ finding.recommendation }}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="alert alert-secondary bg-dark border border-secondary text-light p-4 text-center rounded-3 mb-4">
+                        <i class="bi bi-shield-check text-success fs-3 d-block mb-2"></i>
+                        <h6 class="fw-bold text-light">No Security Concerns Identified</h6>
+                        <p class="text-muted small mb-0">
+                            No rule-based security concerns were recorded for this saved scan.
+                        </p>
+                    </div>
+                    {% endif %}
+
+                    <!-- Footer Action Bar inside card -->
+                    <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-3 pt-3 border-top border-secondary border-opacity-25">
+                        <a href="{{ url_for('home') }}" class="btn btn-cyber btn-sm px-4">
+                            <i class="bi bi-speedometer2 me-1"></i> Return to Operations Dashboard
+                        </a>
+                        <button type="button" class="btn btn-outline-danger btn-sm px-3" data-bs-toggle="modal" data-bs-target="#deleteScanModal">
+                            <i class="bi bi-trash me-1"></i> Delete Historical Record
+                        </button>
+                    </div>
+
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteScanModal" tabindex="-1" aria-labelledby="deleteScanModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-dark border border-danger border-opacity-50 text-light">
+            <div class="modal-header border-secondary border-opacity-25">
+                <h5 class="modal-header-title text-danger fw-bold mb-0" id="deleteScanModalLabel">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>Confirm Scan Deletion
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-2">Are you sure you want to delete historical scan <strong>#{{ scan.id }}</strong> for target <strong class="text-info">{{ scan.target }}</strong>?</p>
+                <p class="text-muted small mb-0">This will permanently remove the scan summary, open ports, and security findings from SQLite. This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer border-secondary border-opacity-25">
+                <button type="button" class="btn btn-secondary btn-sm rounded-pill px-3" data-bs-dismiss="modal">Cancel</button>
+                <form action="{{ url_for('delete_scan_route', scan_id=scan.id) }}" method="POST" class="d-inline">
+                    <button type="submit" class="btn btn-danger btn-sm rounded-pill px-3">
+                        <i class="bi bi-trash me-1"></i> Delete Scan Permanently
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
