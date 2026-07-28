@@ -6,12 +6,8 @@
   Dashboard Page: templates/index.html
   
   PURPOSE:
-  This template represents the main cybersecurity operations dashboard.
-  It inherits the layout, navbar, and footer from templates/base.html.
-  
-  JINJA2 TEMPLATE INHERITANCE:
-  - extends "base.html" imports the parent layout.
-  - block content fills in the body of the application.
+  Main cybersecurity operations dashboard providing target input, authorization
+  confirmation, scan execution results, metrics, and assessment logs.
   =============================================================================
 #}
 
@@ -37,7 +33,7 @@
             <h1 class="hero-title mb-2">Automated Vulnerability Assessment</h1>
             <!-- Short description explaining what SecureScan does -->
             <p class="hero-lead">
-                Perform automated network reconnaissance, identify exposed open ports, detect security misconfigurations, and evaluate target host risk profiles.
+                Perform authorized network reconnaissance, identify exposed open ports, detect security misconfigurations, and evaluate target host risk profiles.
             </p>
         </div>
     </section>
@@ -45,12 +41,10 @@
 
     <!-- 
       =============================================================================
-      2. TARGET SCAN CARD (USER INPUT SECTION)
-      PURPOSE: Allows security analysts to input a target IP or domain and initiate a scan.
-      NOTE: Phase 3 provides the visual interface only. Backend scan logic will be added in later phases.
+      2. TARGET SCAN CARD (USER INPUT & AUTHORIZATION SECTION)
       =============================================================================
     -->
-    <div class="row justify-content-center mb-5">
+    <div class="row justify-content-center mb-4">
         <div class="col-lg-10 col-xl-8">
             <div class="cyber-card p-4">
                 <div class="d-flex align-items-center gap-2 mb-3">
@@ -58,32 +52,57 @@
                     <h5 class="card-title text-light mb-0 fw-bold">Initiate Vulnerability Scan</h5>
                 </div>
                 <p class="text-muted small mb-3">
-                    Enter an IPv4 address, IPv6 address, or host domain name to perform network port scanning and vulnerability analysis.
+                    Enter an IPv4 address, IPv6 address, or host domain name to perform network port scanning and service detection.
                 </p>
 
+                <!-- ERROR BANNER DISPLAY -->
+                {% if error %}
+                <div class="alert alert-danger bg-danger bg-opacity-10 border border-danger border-opacity-25 text-light rounded-3 p-3 mb-3 d-flex align-items-center gap-3">
+                    <i class="bi bi-exclamation-octagon-fill text-danger fs-3 flex-shrink-0"></i>
+                    <div>
+                        <h6 class="alert-heading fw-bold mb-1 text-danger">Target Validation / Scan Error</h6>
+                        <p class="mb-0 small text-light">{{ error }}</p>
+                    </div>
+                </div>
+                {% endif %}
+
                 <!-- Scan Form Input Group -->
-                <form onsubmit="event.preventDefault();" class="row g-3">
-                    <div class="col-md-9">
-                        <div class="input-group">
-                            <span class="input-group-text bg-dark border-secondary border-opacity-50 text-muted">
-                                <i class="bi bi-globe"></i>
-                            </span>
-                            <!-- Required Input Field: Placeholder as specified -->
-                            <input 
-                                type="text" 
-                                class="form-control scan-input" 
-                                id="targetInput" 
-                                placeholder="Enter IP Address or Domain" 
-                                aria-label="Enter IP Address or Domain"
-                                required
-                            >
+                <form action="{{ url_for('home') }}" method="POST" id="scanForm">
+                    <div class="row g-3 align-items-center">
+                        <div class="col-md-9">
+                            <div class="input-group">
+                                <span class="input-group-text bg-dark border-secondary border-opacity-50 text-muted">
+                                    <i class="bi bi-globe"></i>
+                                </span>
+                                <!-- Required Input Field -->
+                                <input 
+                                    type="text" 
+                                    class="form-control scan-input" 
+                                    id="targetInput" 
+                                    name="target"
+                                    value="{{ target|default('') }}"
+                                    placeholder="Enter IP Address or Domain (e.g. 127.0.0.1)" 
+                                    aria-label="Enter IP Address or Domain"
+                                    required
+                                >
+                            </div>
+                        </div>
+                        <div class="col-md-3 d-grid">
+                            <!-- Action Button -->
+                            <button type="submit" id="startScanBtn" class="btn btn-cyber d-flex align-items-center justify-content-center gap-2">
+                                <i class="bi bi-play-fill fs-5" id="btnIcon"></i> 
+                                <span id="btnText">Start Scan</span>
+                            </button>
                         </div>
                     </div>
-                    <div class="col-md-3 d-grid">
-                        <!-- Action Button: Placeholder as specified -->
-                        <button type="button" class="btn btn-cyber d-flex align-items-center justify-content-center gap-2">
-                            <i class="bi bi-play-fill fs-5"></i> Start Scan
-                        </button>
+
+                    <!-- Authorization Checkbox & Mandatory Notice -->
+                    <div class="form-check text-start mt-3 pt-2 border-top border-secondary border-opacity-25">
+                        <input class="form-check-input bg-dark border-secondary" type="checkbox" name="auth_confirmed" id="authConfirmed" value="1" required>
+                        <label class="form-check-label text-light small fw-medium" for="authConfirmed">
+                            <i class="bi bi-shield-exclamation text-warning me-1"></i>
+                            <span class="text-warning fw-semibold">Authorization Notice:</span> Only scan systems you own or are explicitly authorized to test.
+                        </label>
                     </div>
                 </form>
 
@@ -104,11 +123,149 @@
 
     <!-- 
       =============================================================================
-      3. METRICS & STATISTICS CARDS GRID
-      PURPOSE: Provides executive metric summaries (Total Scans, Protected Hosts, High Risk Findings, Reports).
-      WHY: Gives cybersecurity analysts high-level insights at a glance.
+      3. ACTIVE SCAN RESULTS DISPLAY
+      PURPOSE: Displays parsed Nmap scan results upon successful completion.
       =============================================================================
     -->
+    {% if scan_result %}
+    <div class="row justify-content-center mb-5" id="scanResultsSection">
+        <div class="col-lg-10 col-xl-10">
+            <div class="cyber-card p-4 border-info border-opacity-50">
+                <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4 border-bottom border-secondary border-opacity-25 pb-3">
+                    <div>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge bg-success bg-opacity-25 text-success border border-success border-opacity-25 px-2.5 py-1">
+                                <i class="bi bi-check-circle-fill me-1"></i> Scan Completed
+                            </span>
+                            <span class="text-muted small">| Started: {{ scan_result.scan_started_at }}</span>
+                        </div>
+                        <h4 class="text-light fw-bold mt-2 mb-0">
+                            Scan Results: <span class="text-info">{{ scan_result.target }}</span>
+                        </h4>
+                    </div>
+                    <div class="text-md-end">
+                        <span class="badge bg-dark border border-secondary text-light px-3 py-2 fs-7">
+                            <i class="bi bi-stopwatch text-info me-1"></i> Duration: {{ scan_result.scan_duration_seconds }}s
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Summary Metrics Grid -->
+                <div class="row g-3 mb-4">
+                    <div class="col-sm-6 col-md-3">
+                        <div class="bg-dark p-3 rounded-3 border border-secondary border-opacity-25">
+                            <span class="text-muted small d-block mb-1">Host Status</span>
+                            {% if scan_result.host_status == 'up' %}
+                            <span class="badge badge-status-completed px-2.5 py-1 fs-6">
+                                <i class="bi bi-arrow-up-circle-fill me-1"></i> Host Up
+                            </span>
+                            {% else %}
+                            <span class="badge bg-danger bg-opacity-25 text-danger px-2.5 py-1 fs-6">
+                                <i class="bi bi-arrow-down-circle-fill me-1"></i> Host Down / Unreachable
+                            </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-3">
+                        <div class="bg-dark p-3 rounded-3 border border-secondary border-opacity-25">
+                            <span class="text-muted small d-block mb-1">Resolved IP</span>
+                            <span class="fw-bold text-light fs-6">
+                                {{ scan_result.resolved_addresses | join(', ') if scan_result.resolved_addresses else 'N/A' }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-3">
+                        <div class="bg-dark p-3 rounded-3 border border-secondary border-opacity-25">
+                            <span class="text-muted small d-block mb-1">Hostname</span>
+                            <span class="fw-bold text-light fs-6 text-truncate d-block">
+                                {{ scan_result.hostname }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-3">
+                        <div class="bg-dark p-3 rounded-3 border border-secondary border-opacity-25">
+                            <span class="text-muted small d-block mb-1">Open Ports Detected</span>
+                            <span class="fw-bold text-info fs-5">
+                                {{ scan_result.open_port_count }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Open Ports Table -->
+                <h5 class="text-light fw-bold mb-3">
+                    <i class="bi bi-list-nested text-info me-2"></i>Discovered Services (Top 100 TCP Ports)
+                </h5>
+
+                {% if scan_result.open_port_count > 0 %}
+                <div class="table-responsive mb-3">
+                    <table class="table table-cyber align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th scope="col">Port</th>
+                                <th scope="col">Protocol</th>
+                                <th scope="col">State</th>
+                                <th scope="col">Service</th>
+                                <th scope="col">Product</th>
+                                <th scope="col">Version</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for port_item in scan_result.open_ports %}
+                            <tr>
+                                <td class="fw-bold text-cyan">{{ port_item.port }}</td>
+                                <td><span class="badge bg-secondary bg-opacity-25 text-light fs-7">{{ port_item.protocol }}</span></td>
+                                <td>
+                                    <span class="badge badge-status-completed rounded-pill px-2.5 py-1">
+                                        <i class="bi bi-check-circle-fill me-1"></i>{{ port_item.state }}
+                                    </span>
+                                </td>
+                                <td class="fw-medium text-light">{{ port_item.service }}</td>
+                                <td class="text-muted">{{ port_item.product }}</td>
+                                <td class="text-muted">{{ port_item.version }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="alert alert-secondary bg-dark border border-secondary text-light p-4 text-center rounded-3 mb-3">
+                    <i class="bi bi-info-circle text-info fs-3 d-block mb-2"></i>
+                    <h6 class="fw-bold text-light">No Open Ports Detected</h6>
+                    <p class="text-muted small mb-0">
+                        No open ports were detected within the selected top 100 TCP ports. The host may be down, or filtered by a firewall.
+                    </p>
+                </div>
+                {% endif %}
+
+                <!-- Security Scope Disclaimer Notice -->
+                <div class="alert alert-warning bg-warning bg-opacity-10 border border-warning border-opacity-25 text-warning-emphasis rounded-3 p-3 mb-0 d-flex align-items-center gap-2">
+                    <i class="bi bi-shield-exclamation text-warning fs-5 flex-shrink-0"></i>
+                    <span class="small text-light">
+                        <strong class="text-warning">Assessment Disclaimer:</strong> This limited scan does not prove that the target is fully secure. Only common TCP ports were probed.
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+
+    <!-- 
+      =============================================================================
+      4. METRICS & STATISTICS CARDS GRID (DEMO DATA)
+      PURPOSE: Displays summary metrics for global platform overview (Demonstration).
+      =============================================================================
+    -->
+    <div class="d-flex align-items-center justify-content-between mb-3">
+        <h6 class="text-muted fw-bold text-uppercase mb-0 fs-7 tracking-wider">
+            <i class="bi bi-bar-chart-line me-1"></i> Global Assessment Metrics
+        </h6>
+        <span class="badge bg-secondary bg-opacity-25 text-muted px-2.5 py-1 border border-secondary border-opacity-25">
+            Demo Data
+        </span>
+    </div>
+
     <div class="row g-4 mb-5">
         <!-- Metric Card 1: Total Scans -->
         <div class="col-sm-6 col-xl-3">
@@ -166,9 +323,8 @@
 
     <!-- 
       =============================================================================
-      4. RECENT SCANS TABLE
-      PURPOSE: Lists recent scan activities, targets, completion timestamps, status, and risk level.
-      POPULATED WITH: Dummy sample security scan records for demonstration.
+      5. RECENT SCANS TABLE (DEMO DATA)
+      PURPOSE: Lists demonstration assessment log history.
       =============================================================================
     -->
     <div class="cyber-card p-4 mb-4">
@@ -181,12 +337,12 @@
             </div>
             <div>
                 <span class="badge bg-secondary bg-opacity-25 text-light px-3 py-2 border border-secondary border-opacity-25">
-                    <i class="bi bi-clock-history me-1"></i> Dummy Log Data
+                    <i class="bi bi-clock-history me-1"></i> Demo Log Data
                 </span>
             </div>
         </div>
 
-        <!-- Responsive Bootstrap Table Container -->
+        <!-- Responsive Table Container -->
         <div class="table-responsive">
             <table class="table table-cyber align-middle mb-0">
                 <thead>
@@ -198,7 +354,6 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <!-- Row 1: High Risk Finding Example -->
                     <tr>
                         <td>
                             <div class="d-flex align-items-center gap-2">
@@ -219,8 +374,6 @@
                             </span>
                         </td>
                     </tr>
-
-                    <!-- Row 2: Medium Risk Finding Example -->
                     <tr>
                         <td>
                             <div class="d-flex align-items-center gap-2">
@@ -241,8 +394,6 @@
                             </span>
                         </td>
                     </tr>
-
-                    <!-- Row 3: In Progress Scan Example -->
                     <tr>
                         <td>
                             <div class="d-flex align-items-center gap-2">
@@ -263,8 +414,6 @@
                             </span>
                         </td>
                     </tr>
-
-                    <!-- Row 4: Low Risk Finding Example -->
                     <tr>
                         <td>
                             <div class="d-flex align-items-center gap-2">
@@ -291,4 +440,24 @@
     </div>
 
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const scanForm = document.getElementById('scanForm');
+        const startBtn = document.getElementById('startScanBtn');
+        const btnIcon = document.getElementById('btnIcon');
+        const btnText = document.getElementById('btnText');
+
+        if (scanForm && startBtn) {
+            scanForm.addEventListener('submit', function() {
+                // Update button visual state when scan form is submitted
+                startBtn.disabled = true;
+                btnIcon.className = 'spinner-border spinner-border-sm';
+                btnText.textContent = 'Scanning...';
+            });
+        }
+    });
+</script>
 {% endblock %}

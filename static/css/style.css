@@ -20,16 +20,26 @@
   Changing a color here automatically updates it across the entire dashboard.
 */
 :root {
-    --bg-dark: #0b0f19;           /* Deep dark background color */
-    --card-bg: #111827;           /* Card container background color */
-    --card-border: #1f2937;       /* Card subtle border color */
-    --accent-cyan: #06b6d4;       /* Primary cyber cyan color */
-    --accent-blue: #3b82f6;       /* Secondary blue color */
-    --accent-green: #10b981;      /* Success / Low Risk color */
-    --accent-amber: #f59e0b;      /* Warning / Medium Risk color */
-    --accent-red: #ef4444;        /* Danger / High Risk color */
-    --text-primary: #f9fafb;      /* Main text color */
-    --text-muted: #9ca3af;        /* Subtitle / secondary text color */
+    --bg-dark: #0b0f19;
+    /* Deep dark background color */
+    --card-bg: #111827;
+    /* Card container background color */
+    --card-border: #1f2937;
+    /* Card subtle border color */
+    --accent-cyan: #06b6d4;
+    /* Primary cyber cyan color */
+    --accent-blue: #3b82f6;
+    /* Secondary blue color */
+    --accent-green: #10b981;
+    /* Success / Low Risk color */
+    --accent-amber: #f59e0b;
+    /* Warning / Medium Risk color */
+    --accent-red: #ef4444;
+    /* Danger / High Risk color */
+    --text-primary: #f9fafb;
+    /* Main text color */
+    --text-muted: #9ca3af;
+    /* Subtitle / secondary text color */
 }
 
 /* 
@@ -92,6 +102,7 @@ body {
     font-weight: 800;
     background: linear-gradient(135deg, #ffffff 0%, var(--accent-cyan) 100%);
     -webkit-background-clip: text;
+    background-clip: text;
     -webkit-text-fill-color: transparent;
 }
 
