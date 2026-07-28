@@ -1,0 +1,294 @@
+{% extends "base.html" %}
+
+{# 
+  =============================================================================
+  SecureScan - Automated Vulnerability Assessment Platform
+  Dashboard Page: templates/index.html
+  
+  PURPOSE:
+  This template represents the main cybersecurity operations dashboard.
+  It inherits the layout, navbar, and footer from templates/base.html.
+  
+  JINJA2 TEMPLATE INHERITANCE:
+  - extends "base.html" imports the parent layout.
+  - block content fills in the body of the application.
+  =============================================================================
+#}
+
+<!-- Custom Tab Title for Dashboard Page -->
+{% block title %}Dashboard | SecureScan Vulnerability Platform{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-3">
+
+    <!-- 
+      =============================================================================
+      1. HERO SECTION
+      PURPOSE: Displays a prominent welcome banner introducing the platform purpose.
+      =============================================================================
+    -->
+    <section class="hero-section mb-4 rounded-3 px-3">
+        <div class="container">
+            <!-- Badge tag indicating enterprise cybersecurity platform -->
+            <span class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25 px-3 py-2 rounded-pill mb-3">
+                <i class="bi bi-shield-check me-1"></i> Vulnerability Scanner v0.1
+            </span>
+            <!-- Large prominent heading -->
+            <h1 class="hero-title mb-2">Automated Vulnerability Assessment</h1>
+            <!-- Short description explaining what SecureScan does -->
+            <p class="hero-lead">
+                Perform automated network reconnaissance, identify exposed open ports, detect security misconfigurations, and evaluate target host risk profiles.
+            </p>
+        </div>
+    </section>
+
+
+    <!-- 
+      =============================================================================
+      2. TARGET SCAN CARD (USER INPUT SECTION)
+      PURPOSE: Allows security analysts to input a target IP or domain and initiate a scan.
+      NOTE: Phase 3 provides the visual interface only. Backend scan logic will be added in later phases.
+      =============================================================================
+    -->
+    <div class="row justify-content-center mb-5">
+        <div class="col-lg-10 col-xl-8">
+            <div class="cyber-card p-4">
+                <div class="d-flex align-items-center gap-2 mb-3">
+                    <i class="bi bi-crosshair text-info fs-4"></i>
+                    <h5 class="card-title text-light mb-0 fw-bold">Initiate Vulnerability Scan</h5>
+                </div>
+                <p class="text-muted small mb-3">
+                    Enter an IPv4 address, IPv6 address, or host domain name to perform network port scanning and vulnerability analysis.
+                </p>
+
+                <!-- Scan Form Input Group -->
+                <form onsubmit="event.preventDefault();" class="row g-3">
+                    <div class="col-md-9">
+                        <div class="input-group">
+                            <span class="input-group-text bg-dark border-secondary border-opacity-50 text-muted">
+                                <i class="bi bi-globe"></i>
+                            </span>
+                            <!-- Required Input Field: Placeholder as specified -->
+                            <input 
+                                type="text" 
+                                class="form-control scan-input" 
+                                id="targetInput" 
+                                placeholder="Enter IP Address or Domain" 
+                                aria-label="Enter IP Address or Domain"
+                                required
+                            >
+                        </div>
+                    </div>
+                    <div class="col-md-3 d-grid">
+                        <!-- Action Button: Placeholder as specified -->
+                        <button type="button" class="btn btn-cyber d-flex align-items-center justify-content-center gap-2">
+                            <i class="bi bi-play-fill fs-5"></i> Start Scan
+                        </button>
+                    </div>
+                </form>
+
+                <!-- Scan Profile Helper Badges -->
+                <div class="d-flex flex-wrap gap-2 mt-3 pt-2 border-top border-secondary border-opacity-25">
+                    <span class="text-muted small align-self-center me-2">Target Presets:</span>
+                    <button type="button" class="btn btn-sm btn-outline-secondary text-light rounded-pill py-0 px-2 fs-7" onclick="document.getElementById('targetInput').value='127.0.0.1';">
+                        Localhost (127.0.0.1)
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary text-light rounded-pill py-0 px-2 fs-7" onclick="document.getElementById('targetInput').value='scanme.nmap.org';">
+                        Nmap Test Server (scanme.nmap.org)
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- 
+      =============================================================================
+      3. METRICS & STATISTICS CARDS GRID
+      PURPOSE: Provides executive metric summaries (Total Scans, Protected Hosts, High Risk Findings, Reports).
+      WHY: Gives cybersecurity analysts high-level insights at a glance.
+      =============================================================================
+    -->
+    <div class="row g-4 mb-5">
+        <!-- Metric Card 1: Total Scans -->
+        <div class="col-sm-6 col-xl-3">
+            <div class="cyber-card p-3 d-flex align-items-center gap-3">
+                <div class="stat-icon-wrapper stat-icon-cyan">
+                    <i class="bi bi-radar"></i>
+                </div>
+                <div>
+                    <div class="stat-number text-light">148</div>
+                    <p class="stat-label">Total Scans</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Metric Card 2: Protected Hosts -->
+        <div class="col-sm-6 col-xl-3">
+            <div class="cyber-card p-3 d-flex align-items-center gap-3">
+                <div class="stat-icon-wrapper stat-icon-green">
+                    <i class="bi bi-shield-check"></i>
+                </div>
+                <div>
+                    <div class="stat-number text-light">32</div>
+                    <p class="stat-label">Protected Hosts</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Metric Card 3: High Risk Findings -->
+        <div class="col-sm-6 col-xl-3">
+            <div class="cyber-card p-3 d-flex align-items-center gap-3">
+                <div class="stat-icon-wrapper stat-icon-red">
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+                </div>
+                <div>
+                    <div class="stat-number text-light">7</div>
+                    <p class="stat-label">High Risk Findings</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Metric Card 4: Reports Generated -->
+        <div class="col-sm-6 col-xl-3">
+            <div class="cyber-card p-3 d-flex align-items-center gap-3">
+                <div class="stat-icon-wrapper stat-icon-blue">
+                    <i class="bi bi-file-earmark-medical-fill"></i>
+                </div>
+                <div>
+                    <div class="stat-number text-light">94</div>
+                    <p class="stat-label">Reports Generated</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- 
+      =============================================================================
+      4. RECENT SCANS TABLE
+      PURPOSE: Lists recent scan activities, targets, completion timestamps, status, and risk level.
+      POPULATED WITH: Dummy sample security scan records for demonstration.
+      =============================================================================
+    -->
+    <div class="cyber-card p-4 mb-4">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-4">
+            <div>
+                <h5 class="card-title text-light mb-1 fw-bold">
+                    <i class="bi bi-activity text-info me-2"></i>Recent Assessment History
+                </h5>
+                <p class="text-muted small mb-0">Overview of recent target vulnerability scans and risk classifications.</p>
+            </div>
+            <div>
+                <span class="badge bg-secondary bg-opacity-25 text-light px-3 py-2 border border-secondary border-opacity-25">
+                    <i class="bi bi-clock-history me-1"></i> Dummy Log Data
+                </span>
+            </div>
+        </div>
+
+        <!-- Responsive Bootstrap Table Container -->
+        <div class="table-responsive">
+            <table class="table table-cyber align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th scope="col">Target</th>
+                        <th scope="col">Date</th>
+                        <th scope="col">Status</th>
+                        <th scope="col">Risk</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Row 1: High Risk Finding Example -->
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="bi bi-hdd-network text-info"></i>
+                                <span class="fw-semibold">192.168.1.105</span>
+                                <span class="text-muted small">(Internal Host)</span>
+                            </div>
+                        </td>
+                        <td class="text-muted">2026-07-28 10:45</td>
+                        <td>
+                            <span class="badge badge-status-completed rounded-pill px-2.5 py-1">
+                                <i class="bi bi-check-circle-fill me-1"></i>Completed
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge badge-risk-high rounded-pill px-3 py-1">
+                                <i class="bi bi-shield-x me-1"></i>High Risk
+                            </span>
+                        </td>
+                    </tr>
+
+                    <!-- Row 2: Medium Risk Finding Example -->
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="bi bi-globe text-info"></i>
+                                <span class="fw-semibold">scanme.nmap.org</span>
+                                <span class="text-muted small">(External Domain)</span>
+                            </div>
+                        </td>
+                        <td class="text-muted">2026-07-28 09:15</td>
+                        <td>
+                            <span class="badge badge-status-completed rounded-pill px-2.5 py-1">
+                                <i class="bi bi-check-circle-fill me-1"></i>Completed
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge badge-risk-medium rounded-pill px-3 py-1">
+                                <i class="bi bi-shield-exclamation me-1"></i>Medium Risk
+                            </span>
+                        </td>
+                    </tr>
+
+                    <!-- Row 3: In Progress Scan Example -->
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="bi bi-hdd-network text-info"></i>
+                                <span class="fw-semibold">10.0.0.1</span>
+                                <span class="text-muted small">(Gateway Router)</span>
+                            </div>
+                        </td>
+                        <td class="text-muted">2026-07-28 11:20</td>
+                        <td>
+                            <span class="badge badge-status-progress rounded-pill px-2.5 py-1">
+                                <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>In Progress
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge bg-secondary bg-opacity-25 text-muted rounded-pill px-3 py-1">
+                                Pending
+                            </span>
+                        </td>
+                    </tr>
+
+                    <!-- Row 4: Low Risk Finding Example -->
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="bi bi-laptop text-info"></i>
+                                <span class="fw-semibold">127.0.0.1</span>
+                                <span class="text-muted small">(Local Workstation)</span>
+                            </div>
+                        </td>
+                        <td class="text-muted">2026-07-27 16:30</td>
+                        <td>
+                            <span class="badge badge-status-completed rounded-pill px-2.5 py-1">
+                                <i class="bi bi-check-circle-fill me-1"></i>Completed
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge badge-risk-low rounded-pill px-3 py-1">
+                                <i class="bi bi-shield-check me-1"></i>Low Risk
+                            </span>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

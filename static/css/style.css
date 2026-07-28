@@ -1,0 +1,275 @@
+/* 
+=============================================================================
+ SecureScan - Automated Vulnerability Assessment Platform
+ Stylesheet: static/css/style.css
+ 
+ PURPOSE:
+ Custom CSS styles to complement Bootstrap 5, providing a modern, dark-themed
+ cybersecurity aesthetic (neon accents, glassmorphism cards, glowing buttons).
+ 
+ BEGINNER NOTE:
+ While Bootstrap handles the general layout and grid, this custom CSS file
+ overrides default colors and adds custom visual effects like glowing shadows,
+ badge styling, and card hover animations.
+=============================================================================
+*/
+
+/* 
+  1. ROOT VARIABLES
+  Centralized design tokens for colors, fonts, and shadows.
+  Changing a color here automatically updates it across the entire dashboard.
+*/
+:root {
+    --bg-dark: #0b0f19;           /* Deep dark background color */
+    --card-bg: #111827;           /* Card container background color */
+    --card-border: #1f2937;       /* Card subtle border color */
+    --accent-cyan: #06b6d4;       /* Primary cyber cyan color */
+    --accent-blue: #3b82f6;       /* Secondary blue color */
+    --accent-green: #10b981;      /* Success / Low Risk color */
+    --accent-amber: #f59e0b;      /* Warning / Medium Risk color */
+    --accent-red: #ef4444;        /* Danger / High Risk color */
+    --text-primary: #f9fafb;      /* Main text color */
+    --text-muted: #9ca3af;        /* Subtitle / secondary text color */
+}
+
+/* 
+  2. GLOBAL BODY & BACKGROUND
+  Applies the dark cyber theme to the entire web page.
+*/
+body {
+    background-color: var(--bg-dark);
+    color: var(--text-primary);
+    font-family: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* 
+  3. TOP NAVIGATION BAR
+  Custom dark navbar styling with glowing bottom border accent.
+*/
+.navbar-custom {
+    background-color: #0f172a;
+    border-bottom: 1px solid var(--card-border);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+.brand-icon {
+    color: var(--accent-cyan);
+    font-size: 1.5rem;
+    filter: drop-shadow(0 0 8px rgba(6, 182, 212, 0.6));
+}
+
+.brand-title {
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: #ffffff;
+}
+
+.brand-subtitle-badge {
+    font-size: 0.75rem;
+    font-weight: 600;
+    background: rgba(6, 182, 212, 0.15);
+    color: var(--accent-cyan);
+    border: 1px solid rgba(6, 182, 212, 0.3);
+    padding: 3px 8px;
+    border-radius: 12px;
+}
+
+/* 
+  4. HERO SECTION
+  Prominent landing header with cyber gradient text and subtle glow background.
+*/
+.hero-section {
+    background: radial-gradient(circle at top center, rgba(6, 182, 212, 0.1) 0%, rgba(11, 15, 25, 0) 70%);
+    padding: 2.5rem 0 1.5rem 0;
+    text-align: center;
+}
+
+.hero-title {
+    font-size: 2.5rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, #ffffff 0%, var(--accent-cyan) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.hero-lead {
+    color: var(--text-muted);
+    font-size: 1.1rem;
+    max-width: 700px;
+    margin: 0 auto;
+}
+
+/* 
+  5. CYBER CARDS (Scan Card & Stat Cards)
+  Styled bootstrap cards with dark slate backgrounds and subtle hover elevation.
+*/
+.cyber-card {
+    background-color: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.cyber-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(6, 182, 212, 0.15);
+    border-color: rgba(6, 182, 212, 0.4);
+}
+
+/* 
+  6. SCAN INPUT & GLOWING BUTTON
+  Form input field styled for dark mode with glowing cyan focus states.
+*/
+.scan-input {
+    background-color: #0b0f19;
+    border: 1px solid #374151;
+    color: #ffffff;
+    font-size: 1.05rem;
+    padding: 0.75rem 1.25rem;
+}
+
+.scan-input:focus {
+    background-color: #0b0f19;
+    color: #ffffff;
+    border-color: var(--accent-cyan);
+    box-shadow: 0 0 12px rgba(6, 182, 212, 0.4);
+}
+
+.scan-input::placeholder {
+    color: #6b7280;
+}
+
+.btn-cyber {
+    background: linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%);
+    color: #ffffff;
+    font-weight: 600;
+    border: none;
+    padding: 0.75rem 1.75rem;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.btn-cyber:hover {
+    background: linear-gradient(135deg, #0891b2 0%, #2563eb 100%);
+    color: #ffffff;
+    box-shadow: 0 0 18px rgba(6, 182, 212, 0.5);
+}
+
+/* 
+  7. STATISTICS METRICS CARDS
+  Custom stat numbers and icon containers.
+*/
+.stat-icon-wrapper {
+    width: 48px;
+    height: 48px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+}
+
+.stat-icon-cyan {
+    background: rgba(6, 182, 212, 0.15);
+    color: var(--accent-cyan);
+}
+
+.stat-icon-green {
+    background: rgba(16, 185, 129, 0.15);
+    color: var(--accent-green);
+}
+
+.stat-icon-red {
+    background: rgba(239, 68, 68, 0.15);
+    color: var(--accent-red);
+}
+
+.stat-icon-blue {
+    background: rgba(59, 130, 246, 0.15);
+    color: var(--accent-blue);
+}
+
+.stat-number {
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.stat-label {
+    color: var(--text-muted);
+    font-size: 0.875rem;
+    font-weight: 500;
+    margin-bottom: 0;
+}
+
+/* 
+  8. RECENT SCANS TABLE
+  Dark table with custom border styling and custom risk level badges.
+*/
+.table-cyber {
+    color: var(--text-primary);
+    vertical-align: middle;
+}
+
+.table-cyber th {
+    background-color: #0f172a;
+    color: var(--text-muted);
+    font-weight: 600;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid var(--card-border);
+    padding: 1rem;
+}
+
+.table-cyber td {
+    background-color: var(--card-bg);
+    border-bottom: 1px solid var(--card-border);
+    padding: 1rem;
+    color: var(--text-primary);
+}
+
+.badge-risk-high {
+    background-color: rgba(239, 68, 68, 0.2);
+    color: #fca5a5;
+    border: 1px solid rgba(239, 68, 68, 0.4);
+}
+
+.badge-risk-medium {
+    background-color: rgba(245, 158, 11, 0.2);
+    color: #fde68a;
+    border: 1px solid rgba(245, 158, 11, 0.4);
+}
+
+.badge-risk-low {
+    background-color: rgba(16, 185, 129, 0.2);
+    color: #6ee7b7;
+    border: 1px solid rgba(16, 185, 129, 0.4);
+}
+
+.badge-status-completed {
+    background-color: rgba(16, 185, 129, 0.15);
+    color: var(--accent-green);
+}
+
+.badge-status-progress {
+    background-color: rgba(59, 130, 246, 0.15);
+    color: var(--accent-blue);
+}
+
+/* 
+  9. FOOTER
+  Sticky footer styling positioned at bottom of the application.
+*/
+.footer-cyber {
+    margin-top: auto;
+    background-color: #0f172a;
+    border-top: 1px solid var(--card-border);
+    color: var(--text-muted);
+    padding: 1.5rem 0;
+    font-size: 0.9rem;
+}

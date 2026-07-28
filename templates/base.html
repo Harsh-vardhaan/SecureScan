@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    {# 
+      =============================================================================
+      SecureScan - Automated Vulnerability Assessment Platform
+      Base Template: templates/base.html
+      
+      PURPOSE:
+      This is the parent HTML layout template. It defines the common HTML structure
+      (head meta tags, CSS libraries, header navbar, footer, and JavaScript links)
+      that all child templates (like index.html) will inherit.
+      
+      WHY TEMPLATE INHERITANCE?
+      Instead of copying and pasting navigation bars, stylesheets, and footers onto
+      every single web page, Flask & Jinja2 allow child templates to extend this
+      base layout and insert unique page content into named template blocks.
+      =============================================================================
+    #}
+
+    <!-- Standard UTF-8 character encoding -->
+    <meta charset="UTF-8">
+
+    <!-- Responsive Viewport Meta Tag: Ensures page renders cleanly on desktops, tablets, and smartphones -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Page Title block: Child templates can override this block to set a custom browser tab title -->
+    <title>{% block title %}SecureScan | Vulnerability Assessment Platform{% endblock %}</title>
+
+    <!-- 
+      1. BOOTSTRAP 5 CSS (Official CDN)
+      Bootstrap provides grid layout utilities, responsive containers, cards, tables, and buttons.
+    -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+
+    <!-- 
+      2. BOOTSTRAP ICONS (Official CDN)
+      Provides cybersecurity icons (shields, search, radar, alert icons).
+    -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+    <!-- 
+      3. GOOGLE FONTS (Inter Font)
+      Clean modern sans-serif typography suitable for developer and security dashboards.
+    -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- 
+      4. CUSTOM APP STYLESHEET
+      Jinja's url_for('static', filename='...') generates the correct relative URL to static/css/style.css.
+    -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+    <!-- 
+      =============================================================================
+      HEADER / NAVIGATION BAR
+      Displays the brand logo, application name, subtitle, and navigation status.
+      This navbar is displayed consistently across every page in the application.
+      =============================================================================
+    -->
+    <nav class="navbar navbar-expand-lg navbar-dark navbar-custom sticky-top py-3">
+        <div class="container-fluid px-4">
+            <!-- Brand Logo & Name -->
+            <a class="navbar-brand d-flex align-items-center gap-2" href="{{ url_for('home') }}">
+                <!-- Security Shield Icon -->
+                <i class="bi bi-shield-lock-fill brand-icon"></i>
+                <div class="d-flex flex-column flex-md-row align-items-md-center gap-md-2">
+                    <span class="brand-title fs-4">SecureScan</span>
+                    <span class="brand-subtitle-badge d-none d-sm-inline-block">
+                        <i class="bi bi-cpu-fill me-1"></i>Automated Vulnerability Assessment Platform
+                    </span>
+                </div>
+            </a>
+
+            <!-- Mobile Navbar Toggle Button -->
+            <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent" aria-controls="navbarContent" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <!-- Navbar Nav Items & System Status Indicator -->
+            <div class="collapse navbar-collapse" id="navbarContent">
+                <ul class="navbar-nav ms-auto mb-2 mb-lg-0 align-items-lg-center gap-3">
+                    <li class="nav-item">
+                        <a class="nav-link active fw-medium" aria-current="page" href="{{ url_for('home') }}">
+                            <i class="bi bi-speedometer2 me-1"></i> Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <!-- Live System Status Badge (UI Placeholder) -->
+                        <div class="d-flex align-items-center bg-dark border border-secondary border-opacity-25 rounded-pill px-3 py-1 text-light fs-7">
+                            <span class="spinner-grow spinner-grow-sm text-success me-2" role="status" aria-hidden="true"></span>
+                            <span class="text-muted me-1">Engine:</span>
+                            <span class="text-success fw-semibold">Ready</span>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 
+      =============================================================================
+      MAIN CONTENT INHERITANCE BLOCK
+      Child templates (e.g., index.html) place their page-specific HTML content here.
+      Jinja replaces content block with child template markup.
+      =============================================================================
+    -->
+    <main class="flex-grow-1">
+        {% block content %}
+        <!-- Child content renders here -->
+        {% endblock %}
+    </main>
+
+    <!-- 
+      =============================================================================
+      FOOTER SECTION
+      Displays project metadata, software version, and tech stack information.
+      =============================================================================
+    -->
+    <footer class="footer-cyber">
+        <div class="container text-center">
+            <div class="row align-items-center">
+                <div class="col-md-6 text-md-start mb-2 mb-md-0">
+                    <div class="d-flex align-items-center justify-content-center justify-content-md-start gap-2">
+                        <i class="bi bi-shield-check text-info"></i>
+                        <span class="fw-bold text-light">SecureScan</span>
+                        <span class="badge bg-secondary bg-opacity-50 text-light ms-1">Version 0.1</span>
+                    </div>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <p class="mb-0 text-muted">
+                        Built using <span class="text-light fw-medium"><i class="bi bi-code-slash text-warning me-1"></i>Flask & Jinja2</span>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- 
+      5. BOOTSTRAP 5 JAVASCRIPT BUNDLE (Official CDN)
+      Includes Popper.js for dropdowns, tooltips, collapsible navigation, and modals.
+    -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
+
+    <!-- Page-Specific JavaScript Block for child templates -->
+    {% block scripts %}
+    {% endblock %}
+</body>
+</html>
