@@ -245,6 +245,154 @@
                         <strong class="text-warning">Assessment Disclaimer:</strong> This limited scan does not prove that the target is fully secure. Only common TCP ports were probed.
                     </span>
                 </div>
+
+                <!-- 
+                  =============================================================================
+                  SECURITY ANALYSIS SECTION (PHASE 5 RULE-BASED ENGINE)
+                  =============================================================================
+                -->
+                {% if analysis_error %}
+                <div class="alert alert-warning bg-warning bg-opacity-10 border border-warning border-opacity-25 text-light rounded-3 p-3 mt-4 mb-0 d-flex align-items-center gap-3">
+                    <i class="bi bi-exclamation-triangle-fill text-warning fs-4 flex-shrink-0"></i>
+                    <div>
+                        <h6 class="alert-heading fw-bold mb-1 text-warning">Security Analysis Notice</h6>
+                        <p class="mb-0 small text-light">{{ analysis_error }}</p>
+                    </div>
+                </div>
+                {% elif analysis_result %}
+                <div class="mt-5 pt-4 border-top border-secondary border-opacity-25" id="securityAnalysisSection">
+                    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+                        <div>
+                            <h5 class="text-light fw-bold mb-1">
+                                <i class="bi bi-shield-lock text-info me-2"></i>Security Analysis
+                            </h5>
+                            <p class="text-muted small mb-0">Rule-based vulnerability assessment findings and risk analysis.</p>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="text-muted small">Overall Target Risk:</span>
+                            {% if analysis_result.overall_risk == 'Critical' %}
+                            <span class="badge badge-risk-critical px-3 py-2 fs-6 rounded-pill">
+                                <i class="bi bi-exclamation-octagon-fill me-1"></i>Critical Risk
+                            </span>
+                            {% elif analysis_result.overall_risk == 'High' %}
+                            <span class="badge badge-risk-high px-3 py-2 fs-6 rounded-pill">
+                                <i class="bi bi-shield-x me-1"></i>High Risk
+                            </span>
+                            {% elif analysis_result.overall_risk == 'Medium' %}
+                            <span class="badge badge-risk-medium px-3 py-2 fs-6 rounded-pill">
+                                <i class="bi bi-shield-exclamation me-1"></i>Medium Risk
+                            </span>
+                            {% elif analysis_result.overall_risk == 'Low' %}
+                            <span class="badge badge-risk-low px-3 py-2 fs-6 rounded-pill">
+                                <i class="bi bi-shield-check me-1"></i>Low Risk
+                            </span>
+                            {% else %}
+                            <span class="badge badge-risk-info px-3 py-2 fs-6 rounded-pill">
+                                <i class="bi bi-info-circle me-1"></i>Info / Minimal Risk
+                            </span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Severity Summary Cards Grid -->
+                    <div class="row g-2 mb-4">
+                        <div class="col">
+                            <div class="bg-dark p-2 text-center rounded-3 border border-secondary border-opacity-25">
+                                <span class="d-block text-muted fs-7 fw-semibold">Critical</span>
+                                <span class="fw-bold fs-5 text-danger">{{ analysis_result.severity_counts.Critical }}</span>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="bg-dark p-2 text-center rounded-3 border border-secondary border-opacity-25">
+                                <span class="d-block text-muted fs-7 fw-semibold">High</span>
+                                <span class="fw-bold fs-5 text-warning">{{ analysis_result.severity_counts.High }}</span>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="bg-dark p-2 text-center rounded-3 border border-secondary border-opacity-25">
+                                <span class="d-block text-muted fs-7 fw-semibold">Medium</span>
+                                <span class="fw-bold fs-5" style="color: #f59e0b;">{{ analysis_result.severity_counts.Medium }}</span>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="bg-dark p-2 text-center rounded-3 border border-secondary border-opacity-25">
+                                <span class="d-block text-muted fs-7 fw-semibold">Low</span>
+                                <span class="fw-bold fs-5 text-info">{{ analysis_result.severity_counts.Low }}</span>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="bg-dark p-2 text-center rounded-3 border border-secondary border-opacity-25">
+                                <span class="d-block text-muted fs-7 fw-semibold">Info</span>
+                                <span class="fw-bold fs-5 text-secondary">{{ analysis_result.severity_counts.Info }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Findings List -->
+                    {% if analysis_result.finding_count > 0 %}
+                    <div class="d-flex flex-column gap-3 mb-4">
+                        {% for finding in analysis_result.findings %}
+                        <div class="finding-card finding-card-{{ finding.severity | lower }}">
+                            <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-start gap-2 mb-2">
+                                <div>
+                                    <div class="d-flex align-items-center gap-2 mb-1">
+                                        <span class="badge bg-secondary bg-opacity-25 text-light border border-secondary border-opacity-25 fs-7">{{ finding.rule_id }}</span>
+                                        <span class="badge bg-dark text-info border border-info border-opacity-25 fs-7">{{ finding.category }}</span>
+                                        <span class="badge bg-dark text-light border border-secondary border-opacity-25 fs-7">Port {{ finding.port }}/{{ finding.protocol }}</span>
+                                    </div>
+                                    <h6 class="text-light fw-bold mb-0 fs-6">{{ finding.title }}</h6>
+                                </div>
+                                <div class="d-flex align-items-center gap-2">
+                                    {% if finding.severity == 'Critical' %}
+                                    <span class="badge bg-danger text-light px-2.5 py-1">Critical Severity</span>
+                                    {% elif finding.severity == 'High' %}
+                                    <span class="badge bg-danger bg-opacity-75 text-light px-2.5 py-1">High Severity</span>
+                                    {% elif finding.severity == 'Medium' %}
+                                    <span class="badge bg-warning text-dark px-2.5 py-1">Medium Severity</span>
+                                    {% elif finding.severity == 'Low' %}
+                                    <span class="badge bg-primary bg-opacity-75 text-light px-2.5 py-1">Low Severity</span>
+                                    {% else %}
+                                    <span class="badge bg-info bg-opacity-50 text-light px-2.5 py-1">Info</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <p class="text-light-50 small mb-3">{{ finding.description }}</p>
+                            <div class="row g-2 mb-2">
+                                <div class="col-md-6">
+                                    <div class="evidence-box">
+                                        <div class="text-muted fs-8 fw-semibold text-uppercase mb-1">Evidence Detected</div>
+                                        <div>{{ finding.evidence }}</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="recommendation-box">
+                                        <div class="text-success fs-8 fw-semibold text-uppercase mb-1"><i class="bi bi-shield-check me-1"></i>Recommendation</div>
+                                        <div>{{ finding.recommendation }}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="alert alert-secondary bg-dark border border-secondary text-light p-4 text-center rounded-3 mb-4">
+                        <i class="bi bi-shield-check text-success fs-3 d-block mb-2"></i>
+                        <h6 class="fw-bold text-light">No Security Concerns Identified</h6>
+                        <p class="text-muted small mb-0">
+                            No rule-based security concerns were identified in this limited scan. This does not prove that the target is fully secure.
+                        </p>
+                    </div>
+                    {% endif %}
+
+                    <!-- Rule-Based Disclaimer Banner -->
+                    <div class="disclaimer-banner d-flex align-items-center gap-2">
+                        <i class="bi bi-info-circle-fill text-info fs-5 flex-shrink-0"></i>
+                        <span class="small text-muted">
+                            <strong class="text-info">Analysis Disclaimer:</strong> SecureScan uses transparent rule-based observations. Findings indicate potential exposure or configuration risk and do not prove exploitability.
+                        </span>
+                    </div>
+                </div>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -253,20 +401,79 @@
 
     <!-- 
       =============================================================================
-      4. METRICS & STATISTICS CARDS GRID (DEMO DATA)
-      PURPOSE: Displays summary metrics for global platform overview (Demonstration).
+      4. METRICS & STATISTICS CARDS GRID
+      PURPOSE: Displays active scan metrics if available, or platform overview.
       =============================================================================
     -->
     <div class="d-flex align-items-center justify-content-between mb-3">
         <h6 class="text-muted fw-bold text-uppercase mb-0 fs-7 tracking-wider">
-            <i class="bi bi-bar-chart-line me-1"></i> Global Assessment Metrics
+            <i class="bi bi-bar-chart-line me-1"></i> Assessment Metrics
         </h6>
+        {% if scan_result %}
+        <span class="badge bg-info bg-opacity-25 text-info px-2.5 py-1 border border-info border-opacity-25">
+            Active Scan Results
+        </span>
+        {% else %}
         <span class="badge bg-secondary bg-opacity-25 text-muted px-2.5 py-1 border border-secondary border-opacity-25">
             Demo Data
         </span>
+        {% endif %}
     </div>
 
     <div class="row g-4 mb-5">
+        {% if scan_result %}
+        <!-- Card 1: Open Ports -->
+        <div class="col-sm-6 col-xl-3">
+            <div class="cyber-card p-3 d-flex align-items-center gap-3">
+                <div class="stat-icon-wrapper stat-icon-cyan">
+                    <i class="bi bi-radar"></i>
+                </div>
+                <div>
+                    <div class="stat-number text-light">{{ scan_result.open_port_count }}</div>
+                    <p class="stat-label">Open Ports</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Card 2: Total Findings -->
+        <div class="col-sm-6 col-xl-3">
+            <div class="cyber-card p-3 d-flex align-items-center gap-3">
+                <div class="stat-icon-wrapper stat-icon-blue">
+                    <i class="bi bi-shield-exclamation"></i>
+                </div>
+                <div>
+                    <div class="stat-number text-light">{{ analysis_result.finding_count if analysis_result else 0 }}</div>
+                    <p class="stat-label">Security Findings</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Card 3: Overall Risk -->
+        <div class="col-sm-6 col-xl-3">
+            <div class="cyber-card p-3 d-flex align-items-center gap-3">
+                <div class="stat-icon-wrapper stat-icon-red">
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+                </div>
+                <div>
+                    <div class="stat-number text-light fs-4 fw-bold">{{ analysis_result.overall_risk if analysis_result else 'N/A' }}</div>
+                    <p class="stat-label">Overall Risk Rating</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Card 4: Scan Duration -->
+        <div class="col-sm-6 col-xl-3">
+            <div class="cyber-card p-3 d-flex align-items-center gap-3">
+                <div class="stat-icon-wrapper stat-icon-green">
+                    <i class="bi bi-stopwatch"></i>
+                </div>
+                <div>
+                    <div class="stat-number text-light">{{ scan_result.scan_duration_seconds }}s</div>
+                    <p class="stat-label">Scan Duration</p>
+                </div>
+            </div>
+        </div>
+        {% else %}
         <!-- Metric Card 1: Total Scans -->
         <div class="col-sm-6 col-xl-3">
             <div class="cyber-card p-3 d-flex align-items-center gap-3">
@@ -318,6 +525,7 @@
                 </div>
             </div>
         </div>
+        {% endif %}
     </div>
 
 

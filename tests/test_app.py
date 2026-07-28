@@ -5,7 +5,7 @@ Flask Application Tests: tests/test_app.py
 
 PURPOSE:
 Integration tests for Flask routes, target validation handling, authorization
-verification, and mocked scan result rendering.
+verification, mocked scan result rendering, and vulnerability analysis integration.
 
 CRITICAL SECURITY RULE:
 All scanner engine calls are mocked using unittest.mock. No actual network
@@ -67,7 +67,7 @@ class TestFlaskRoutes(unittest.TestCase):
 
     @patch("backend.app.run_scan")
     def test_post_successful_mocked_scan(self, mock_run_scan):
-        """Verify POST / with valid target and authorization renders mocked scan results."""
+        """Verify POST / with valid target and authorization renders mocked scan results and analysis."""
         mock_run_scan.return_value = {
             "target": "127.0.0.1",
             "resolved_addresses": ["127.0.0.1"],
@@ -99,7 +99,94 @@ class TestFlaskRoutes(unittest.TestCase):
         self.assertIn(b"127.0.0.1", response.data)
         self.assertIn(b"Apache httpd", response.data)
         self.assertIn(b"2.4.52", response.data)
+        self.assertIn(b"Security Analysis", response.data)
+        self.assertIn(b"SS-HTTP-001", response.data)
         mock_run_scan.assert_called_once_with("127.0.0.1")
+
+    @patch("backend.app.run_scan")
+    def test_post_renders_mocked_smb_finding(self, mock_run_scan):
+        """Verify mocked SMB port 445 scan renders High Risk SMB finding in HTML."""
+        mock_run_scan.return_value = {
+            "target": "127.0.0.1",
+            "resolved_addresses": ["127.0.0.1"],
+            "host_status": "up",
+            "hostname": "localhost",
+            "scan_started_at": "2026-07-28 12:00:00",
+            "scan_duration_seconds": 0.85,
+            "open_ports": [
+                {
+                    "port": 445,
+                    "protocol": "TCP",
+                    "state": "open",
+                    "service": "microsoft-ds",
+                    "product": "Windows SMB",
+                    "version": "",
+                }
+            ],
+            "open_port_count": 1,
+        }
+
+        response = self.client.post(
+            "/",
+            data={"target": "127.0.0.1", "auth_confirmed": "1"},
+            follow_redirects=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"SS-SMB-001", response.data)
+        self.assertIn(b"SMB Service Exposed", response.data)
+        self.assertIn(b"High Risk", response.data)
+
+    @patch("backend.app.run_scan")
+    def test_post_renders_no_findings_message(self, mock_run_scan):
+        """Verify scan with no open ports renders safe no-findings message."""
+        mock_run_scan.return_value = {
+            "target": "127.0.0.1",
+            "resolved_addresses": ["127.0.0.1"],
+            "host_status": "up",
+            "hostname": "localhost",
+            "scan_started_at": "2026-07-28 12:00:00",
+            "scan_duration_seconds": 0.5,
+            "open_ports": [],
+            "open_port_count": 0,
+        }
+
+        response = self.client.post(
+            "/",
+            data={"target": "127.0.0.1", "auth_confirmed": "1"},
+            follow_redirects=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"No rule-based security concerns were identified", response.data)
+
+    @patch("backend.app.analyze_scan")
+    @patch("backend.app.run_scan")
+    def test_post_handles_analyzer_failure_gracefully(self, mock_run_scan, mock_analyze_scan):
+        """Verify Flask handles analyzer exception gracefully without discarding scan results."""
+        mock_run_scan.return_value = {
+            "target": "127.0.0.1",
+            "resolved_addresses": ["127.0.0.1"],
+            "host_status": "up",
+            "hostname": "localhost",
+            "scan_started_at": "2026-07-28 12:00:00",
+            "scan_duration_seconds": 1.0,
+            "open_ports": [
+                {"port": 80, "protocol": "TCP", "state": "open", "service": "http", "product": "", "version": ""}
+            ],
+            "open_port_count": 1,
+        }
+        mock_analyze_scan.side_effect = RuntimeError("Simulated analyzer failure")
+
+        response = self.client.post(
+            "/",
+            data={"target": "127.0.0.1", "auth_confirmed": "1"},
+            follow_redirects=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"Scan Results:", response.data)
+        self.assertIn(b"Rule-based security analysis could not be completed", response.data)
 
     @patch("backend.app.run_scan")
     def test_post_handles_scanner_unavailable(self, mock_run_scan):

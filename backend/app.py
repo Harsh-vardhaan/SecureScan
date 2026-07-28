@@ -41,6 +41,7 @@ from scanner.nmap_scanner import (
     ScanTimeoutError,
     ScanExecutionError,
 )
+from vulnerability import analyze_scan
 
 
 @app.route("/", methods=["GET", "POST"])
@@ -69,7 +70,23 @@ def home():
         try:
             logger.info(f"Initiating authorized scan for target: {normalized_target}")
             scan_result = run_scan(normalized_target)
-            return render_template("index.html", scan_result=scan_result, target=normalized_target)
+
+            # 4. Rule-based security vulnerability analysis
+            analysis_result = None
+            analysis_error = None
+            try:
+                analysis_result = analyze_scan(scan_result)
+            except Exception as ae:
+                logger.exception(f"Security analysis failed for target {normalized_target}: {ae}")
+                analysis_error = "Rule-based security analysis could not be completed for this scan."
+
+            return render_template(
+                "index.html",
+                scan_result=scan_result,
+                analysis_result=analysis_result,
+                analysis_error=analysis_error,
+                target=normalized_target
+            )
 
         except ScannerUnavailableError as e:
             logger.error(f"Scanner unavailable: {e}")

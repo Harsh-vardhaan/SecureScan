@@ -244,6 +244,13 @@ body {
     color: var(--text-primary);
 }
 
+.badge-risk-critical {
+    background-color: rgba(185, 28, 28, 0.3);
+    color: #f87171;
+    border: 1px solid rgba(239, 68, 68, 0.6);
+    box-shadow: 0 0 10px rgba(239, 68, 68, 0.3);
+}
+
 .badge-risk-high {
     background-color: rgba(239, 68, 68, 0.2);
     color: #fca5a5;
@@ -257,9 +264,15 @@ body {
 }
 
 .badge-risk-low {
-    background-color: rgba(16, 185, 129, 0.2);
-    color: #6ee7b7;
-    border: 1px solid rgba(16, 185, 129, 0.4);
+    background-color: rgba(59, 130, 246, 0.2);
+    color: #93c5fd;
+    border: 1px solid rgba(59, 130, 246, 0.4);
+}
+
+.badge-risk-info {
+    background-color: rgba(6, 182, 212, 0.2);
+    color: #67e8f9;
+    border: 1px solid rgba(6, 182, 212, 0.4);
 }
 
 .badge-status-completed {
@@ -273,7 +286,56 @@ body {
 }
 
 /* 
-  9. FOOTER
+  9. PHASE 5 VULNERABILITY ANALYSIS STYLES
+  Custom severity badges, finding cards, recommendations, and disclaimer boxes.
+*/
+.finding-card {
+    background-color: #0d1322;
+    border: 1px solid #1e293b;
+    border-radius: 10px;
+    padding: 1.25rem;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.finding-card:hover {
+    border-color: rgba(6, 182, 212, 0.3);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+}
+
+.finding-card-critical { border-left: 4px solid #ef4444; }
+.finding-card-high { border-left: 4px solid #f97316; }
+.finding-card-medium { border-left: 4px solid #f59e0b; }
+.finding-card-low { border-left: 4px solid #3b82f6; }
+.finding-card-info { border-left: 4px solid #06b6d4; }
+
+.evidence-box {
+    background-color: #0b0f19;
+    border: 1px solid #1f2937;
+    border-radius: 6px;
+    padding: 0.6rem 0.8rem;
+    font-family: monospace;
+    font-size: 0.85rem;
+    color: #cbd5e1;
+}
+
+.recommendation-box {
+    background-color: rgba(16, 185, 129, 0.05);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+    border-radius: 6px;
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
+    color: #e2e8f0;
+}
+
+.disclaimer-banner {
+    background-color: rgba(6, 182, 212, 0.08);
+    border: 1px solid rgba(6, 182, 212, 0.25);
+    border-radius: 8px;
+    padding: 1rem;
+}
+
+/* 
+  10. FOOTER
   Sticky footer styling positioned at bottom of the application.
 */
 .footer-cyber {
