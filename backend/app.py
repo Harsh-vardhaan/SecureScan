@@ -48,6 +48,7 @@ from scanner.nmap_scanner import (
     ScanExecutionError,
 )
 from vulnerability import analyze_scan
+from reports import build_report_context
 from database.db import (
     initialize_database,
     save_scan,
@@ -192,6 +193,22 @@ def view_scan(scan_id: int):
         return render_template("scan_detail.html", scan=scan)
     except DatabaseError as de:
         logger.error(f"Database error fetching scan ID {scan_id}: {de}")
+        abort(500)
+
+
+@app.route("/scans/<int:scan_id>/report", methods=["GET"])
+def view_scan_report(scan_id: int):
+    """Render an HTML report using only an already-saved scan record."""
+    db_path = _get_active_db_path()
+    try:
+        scan = get_scan_by_id(scan_id, db_path=db_path)
+        if not scan:
+            logger.warning(f"Requested report for missing scan ID {scan_id}.")
+            abort(404)
+        report = build_report_context(scan)
+        return render_template("report.html", report=report)
+    except DatabaseError as de:
+        logger.error(f"Database error generating report for scan ID {scan_id}: {de}")
         abort(500)
 
 

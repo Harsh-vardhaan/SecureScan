@@ -304,6 +304,73 @@ class TestFlaskRoutes(unittest.TestCase):
         response = self.client.get("/scans/99999")
         self.assertEqual(response.status_code, 404)
 
+    def test_view_scan_detail_includes_html_report_button(self):
+        """Verify a saved scan detail page links to its HTML report."""
+        scan_id = save_scan(
+            {"target": "127.0.0.1", "scan_started_at": "2026-07-29"},
+            {},
+            db_path=self.db_path,
+        )
+
+        response = self.client.get(f"/scans/{scan_id}")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"View HTML Report", response.data)
+        self.assertIn(f"/scans/{scan_id}/report".encode(), response.data)
+
+    @patch("backend.app.analyze_scan")
+    @patch("backend.app.run_scan")
+    def test_view_html_report_uses_saved_scan_without_rescanning(
+        self, mock_run_scan, mock_analyze_scan
+    ):
+        """Verify HTML reports use persisted data and never invoke scan or analysis."""
+        scan_id = save_scan(
+            {
+                "target": "192.0.2.25",
+                "host_status": "up",
+                "hostname": "report-target.local",
+                "resolved_addresses": ["192.0.2.25"],
+                "scan_started_at": "2026-07-29 10:00:00",
+                "scan_duration_seconds": 1.0,
+                "open_ports": [
+                    {"port": 80, "protocol": "TCP", "state": "open", "service": "http", "product": "Apache", "version": "2.4"}
+                ],
+            },
+            {
+                "overall_risk": "Low",
+                "findings": [
+                    {
+                        "rule_id": "SS-HTTP-001",
+                        "title": "HTTP Service Exposed",
+                        "severity": "Low",
+                        "port": 80,
+                        "protocol": "TCP",
+                        "description": "HTTP is reachable.",
+                        "evidence": "TCP/80 open",
+                        "recommendation": "Use HTTPS.",
+                        "confidence": "High",
+                    }
+                ],
+            },
+            db_path=self.db_path,
+        )
+
+        response = self.client.get(f"/scans/{scan_id}/report")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"Vulnerability Assessment Report", response.data)
+        self.assertIn(b"SSR-", response.data)
+        self.assertIn(b"192.0.2.25", response.data)
+        self.assertIn(b"SS-HTTP-001", response.data)
+        self.assertIn(b"Use HTTPS.", response.data)
+        mock_run_scan.assert_not_called()
+        mock_analyze_scan.assert_not_called()
+
+    def test_view_html_report_missing_scan_returns_404(self):
+        """Verify reports return 404 when the saved scan does not exist."""
+        response = self.client.get("/scans/99999/report")
+        self.assertEqual(response.status_code, 404)
+
     def test_delete_scan_route_requires_post(self):
         """Verify GET /scans/<scan_id>/delete returns HTTP 405 Method Not Allowed."""
         response = self.client.get("/scans/1/delete")
