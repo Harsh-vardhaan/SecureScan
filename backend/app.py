@@ -14,7 +14,9 @@ analysis, and persists scan records in SQLite.
 import os
 import sys
 import logging
-from flask import Flask, render_template, request, redirect, url_for, flash, abort
+import re
+from io import BytesIO
+from flask import Flask, render_template, request, redirect, url_for, flash, abort, send_file
 
 # Calculate the absolute path to the root project directory (one level up from backend/)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -48,7 +50,7 @@ from scanner.nmap_scanner import (
     ScanExecutionError,
 )
 from vulnerability import analyze_scan
-from reports import build_report_context
+from reports import build_report_context, generate_pdf_report
 from database.db import (
     initialize_database,
     save_scan,
@@ -210,6 +212,42 @@ def view_scan_report(scan_id: int):
     except DatabaseError as de:
         logger.error(f"Database error generating report for scan ID {scan_id}: {de}")
         abort(500)
+
+
+def _safe_report_filename(target: str, scan_id: int) -> str:
+    """Build a bounded filename containing only safe portable characters."""
+    safe_target = re.sub(r"[^A-Za-z0-9_-]+", "-", str(target or "target"))
+    safe_target = safe_target.strip("-_")[:80] or "target"
+    return f"securescan-report-{safe_target}-{scan_id}.pdf"
+
+
+@app.route("/scans/<int:scan_id>/report.pdf", methods=["GET"])
+def download_scan_report(scan_id: int):
+    """Generate an in-memory PDF from an existing saved scan record."""
+    db_path = _get_active_db_path()
+    try:
+        scan = get_scan_by_id(scan_id, db_path=db_path)
+    except DatabaseError as de:
+        logger.error(f"Database error fetching scan ID {scan_id} for PDF report: {de}")
+        abort(500)
+
+    if not scan:
+        logger.warning(f"Requested PDF report for missing scan ID {scan_id}.")
+        abort(404)
+
+    try:
+        report = build_report_context(scan)
+        pdf_bytes = generate_pdf_report(report)
+    except Exception as error:
+        logger.exception(f"PDF report generation failed for scan ID {scan_id}: {error}")
+        abort(500, description="The PDF report could not be generated.")
+
+    return send_file(
+        BytesIO(pdf_bytes),
+        mimetype="application/pdf",
+        as_attachment=True,
+        download_name=_safe_report_filename(scan.get("target", ""), scan_id),
+    )
 
 
 @app.route("/scans/<int:scan_id>/delete", methods=["POST"])

@@ -43,6 +43,8 @@
     <main>
         <nav class="actions" aria-label="Report actions">
             <a class="button" href="{{ url_for('view_scan', scan_id=report.metadata.scan_id) }}">Back to Scan Detail</a>
+            <a class="button" href="{{ url_for('download_scan_report', scan_id=report.metadata.scan_id) }}">Download PDF</a>
+            <button class="button" type="button" onclick="window.print()">Print Report</button>
         </nav>
 
         <section aria-labelledby="assessment-details">

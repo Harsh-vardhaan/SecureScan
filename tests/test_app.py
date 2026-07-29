@@ -20,7 +20,7 @@ import unittest
 from unittest.mock import patch
 
 from backend.app import app
-from database.db import initialize_database, save_scan
+from database.db import get_scan_by_id, initialize_database, save_scan
 from scanner.nmap_scanner import ScannerUnavailableError
 
 
@@ -370,6 +370,75 @@ class TestFlaskRoutes(unittest.TestCase):
         """Verify reports return 404 when the saved scan does not exist."""
         response = self.client.get("/scans/99999/report")
         self.assertEqual(response.status_code, 404)
+
+    def test_report_pages_include_pdf_actions(self):
+        """Verify scan detail and HTML report pages expose PDF download actions."""
+        scan_id = save_scan(
+            {"target": "127.0.0.1", "scan_started_at": "2026-07-29"},
+            {},
+            db_path=self.db_path,
+        )
+
+        detail_response = self.client.get(f"/scans/{scan_id}")
+        html_report_response = self.client.get(f"/scans/{scan_id}/report")
+
+        self.assertIn(b"Download PDF Report", detail_response.data)
+        self.assertIn(b"Download PDF", html_report_response.data)
+        self.assertIn(b"Print Report", html_report_response.data)
+        self.assertIn(f"/scans/{scan_id}/report.pdf".encode(), detail_response.data)
+
+    @patch("backend.app.analyze_scan")
+    @patch("backend.app.run_scan")
+    def test_pdf_report_route_returns_attachment_without_rescanning(
+        self, mock_run_scan, mock_analyze_scan
+    ):
+        """Verify PDF download uses persisted data without scanning or analysis."""
+        scan_id = save_scan(
+            {
+                "target": "demo target/../../unsafe",
+                "host_status": "up",
+                "scan_started_at": "2026-07-29 13:00:00",
+                "open_ports": [{"port": 443, "protocol": "TCP", "state": "open"}],
+            },
+            {"overall_risk": "Info"},
+            db_path=self.db_path,
+        )
+        before = get_scan_by_id(scan_id, db_path=self.db_path)
+
+        response = self.client.get(f"/scans/{scan_id}/report.pdf")
+        after = get_scan_by_id(scan_id, db_path=self.db_path)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.mimetype, "application/pdf")
+        self.assertTrue(response.data.startswith(b"%PDF"))
+        disposition = response.headers["Content-Disposition"]
+        self.assertIn("attachment;", disposition)
+        self.assertIn(f"securescan-report-demo-target-unsafe-{scan_id}.pdf", disposition)
+        self.assertNotIn("/", disposition)
+        self.assertNotIn("..", disposition)
+        self.assertEqual(before, after)
+        mock_run_scan.assert_not_called()
+        mock_analyze_scan.assert_not_called()
+
+    def test_pdf_report_missing_scan_returns_404(self):
+        """Verify PDF download returns 404 for a missing saved scan."""
+        response = self.client.get("/scans/99999/report.pdf")
+        self.assertEqual(response.status_code, 404)
+
+    @patch("backend.app.generate_pdf_report")
+    def test_pdf_generation_failure_returns_controlled_500(self, mock_generate_pdf):
+        """Verify PDF generator failures return a controlled response."""
+        scan_id = save_scan(
+            {"target": "127.0.0.1", "scan_started_at": "2026-07-29"},
+            {},
+            db_path=self.db_path,
+        )
+        mock_generate_pdf.side_effect = RuntimeError("simulated PDF failure")
+
+        response = self.client.get(f"/scans/{scan_id}/report.pdf")
+
+        self.assertEqual(response.status_code, 500)
+        self.assertIn(b"The PDF report could not be generated", response.data)
 
     def test_delete_scan_route_requires_post(self):
         """Verify GET /scans/<scan_id>/delete returns HTTP 405 Method Not Allowed."""
