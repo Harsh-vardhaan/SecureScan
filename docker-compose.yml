@@ -1,0 +1,27 @@
+services:
+  securescan:
+    image: securescan:phase8
+    build:
+      context: .
+      target: runtime
+    ports:
+      - "127.0.0.1:5001:5000"
+    environment:
+      SECURESCAN_DATABASE_PATH: /app/data/securescan.db
+      SECRET_KEY: ${SECRET_KEY:?Set SECRET_KEY before starting SecureScan}
+    volumes:
+      - securescan-data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5000/health', timeout=3).read()"
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+
+volumes:
+  securescan-data:

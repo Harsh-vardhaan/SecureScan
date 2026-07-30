@@ -16,7 +16,7 @@ import sys
 import logging
 import re
 from io import BytesIO
-from flask import Flask, render_template, request, redirect, url_for, flash, abort, send_file
+from flask import Flask, render_template, request, redirect, url_for, flash, abort, send_file, jsonify
 
 # Calculate the absolute path to the root project directory (one level up from backend/)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -78,6 +78,29 @@ def init_app_db():
 # Initialize database automatically on startup
 with app.app_context():
     init_app_db()
+
+
+def _env_flag(name: str, default: bool = False) -> bool:
+    """Parse an opt-in boolean environment variable using explicit true values."""
+    value = os.environ.get(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _local_port() -> int:
+    """Return a validated local development port with a safe fallback."""
+    try:
+        port = int(os.environ.get("SECURESCAN_PORT", "5000"))
+    except (TypeError, ValueError):
+        return 5000
+    return port if 1 <= port <= 65535 else 5000
+
+
+@app.route("/health", methods=["GET"])
+def health():
+    """Return process health without database, scanner, or analyzer activity."""
+    return jsonify(status="healthy", service="securescan"), 200
 
 
 @app.route("/", methods=["GET", "POST"])
@@ -272,5 +295,9 @@ def delete_scan_route(scan_id: int):
 
 
 if __name__ == "__main__":
-    # Run Flask development server on http://127.0.0.1:5000 with debug mode enabled
-    app.run(debug=True)
+    # Local development only. Container deployments use Gunicorn instead.
+    app.run(
+        host=os.environ.get("SECURESCAN_HOST", "127.0.0.1"),
+        port=_local_port(),
+        debug=_env_flag("SECURESCAN_DEBUG"),
+    )

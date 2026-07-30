@@ -19,7 +19,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from backend.app import app
+from backend.app import _env_flag, _local_port, app
 from database.db import get_scan_by_id, initialize_database, save_scan
 from scanner.nmap_scanner import ScannerUnavailableError
 
@@ -50,6 +50,59 @@ class TestFlaskRoutes(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn(b"SecureScan", response.data)
         self.assertIn(b"Automated Vulnerability Assessment", response.data)
+
+    @patch("backend.app.analyze_scan")
+    @patch("backend.app.run_scan")
+    def test_health_is_side_effect_free(self, mock_run_scan, mock_analyze_scan):
+        """Verify health reports readiness without scanning, analysis, or writes."""
+        scan_id = save_scan(
+            {"target": "health-check.local", "scan_started_at": "2026-07-30"},
+            {},
+            db_path=self.db_path,
+        )
+        before = get_scan_by_id(scan_id, db_path=self.db_path)
+
+        response = self.client.get("/health")
+        after = get_scan_by_id(scan_id, db_path=self.db_path)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.get_json(),
+            {"status": "healthy", "service": "securescan"},
+        )
+        self.assertEqual(before, after)
+        mock_run_scan.assert_not_called()
+        mock_analyze_scan.assert_not_called()
+
+    def test_environment_flag_parsing_is_explicit_and_safe(self):
+        """Verify debug mode is disabled unless an explicit true value is used."""
+        true_values = ("1", "true", "TRUE", " yes ", "on")
+        for value in true_values:
+            with self.subTest(value=value), patch.dict(
+                os.environ, {"SECURESCAN_DEBUG": value}, clear=False
+            ):
+                self.assertTrue(_env_flag("SECURESCAN_DEBUG"))
+
+        false_values = ("0", "false", "no", "off", "unexpected", "")
+        for value in false_values:
+            with self.subTest(value=value), patch.dict(
+                os.environ, {"SECURESCAN_DEBUG": value}, clear=False
+            ):
+                self.assertFalse(_env_flag("SECURESCAN_DEBUG"))
+
+        with patch.dict(os.environ, {}, clear=True):
+            self.assertFalse(_env_flag("SECURESCAN_DEBUG"))
+
+    def test_local_port_parsing_uses_safe_fallback(self):
+        """Verify malformed or out-of-range development ports fall back to 5000."""
+        for value in ("invalid", "0", "65536", "-1"):
+            with self.subTest(value=value), patch.dict(
+                os.environ, {"SECURESCAN_PORT": value}, clear=False
+            ):
+                self.assertEqual(_local_port(), 5000)
+
+        with patch.dict(os.environ, {"SECURESCAN_PORT": "8080"}, clear=False):
+            self.assertEqual(_local_port(), 8080)
 
     def test_get_dashboard_renders_recent_scans(self):
         """Verify GET / displays real recent saved scans from SQLite."""
