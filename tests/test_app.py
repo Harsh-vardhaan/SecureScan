@@ -355,14 +355,17 @@ class TestFlaskRoutes(unittest.TestCase):
             db_path=self.db_path,
         )
 
+        before = get_scan_by_id(scan_id, db_path=self.db_path)
         response = self.client.get(f"/scans/{scan_id}/report")
+        after = get_scan_by_id(scan_id, db_path=self.db_path)
 
         self.assertEqual(response.status_code, 200)
-        self.assertIn(b"Vulnerability Assessment Report", response.data)
+        self.assertIn(b"Professional Vulnerability Assessment Report", response.data)
         self.assertIn(b"SSR-", response.data)
         self.assertIn(b"192.0.2.25", response.data)
         self.assertIn(b"SS-HTTP-001", response.data)
         self.assertIn(b"Use HTTPS.", response.data)
+        self.assertEqual(before, after)
         mock_run_scan.assert_not_called()
         mock_analyze_scan.assert_not_called()
 
@@ -386,6 +389,53 @@ class TestFlaskRoutes(unittest.TestCase):
         self.assertIn(b"Download PDF", html_report_response.data)
         self.assertIn(b"Print Report", html_report_response.data)
         self.assertIn(f"/scans/{scan_id}/report.pdf".encode(), detail_response.data)
+
+    def test_html_report_displays_complete_scope_and_disclaimer(self):
+        """Verify authorization, limitations, and cautious disclaimer are visible."""
+        scan_id = save_scan(
+            {"target": "127.0.0.1", "scan_started_at": "2026-07-30"},
+            {},
+            db_path=self.db_path,
+        )
+
+        response = self.client.get(f"/scans/{scan_id}/report")
+        rendered = response.data.lower()
+
+        self.assertEqual(response.status_code, 200)
+        for expected in (
+            b"authorized, limited network assessment",
+            b"top 100 tcp ports",
+            b"udp ports and services were not assessed",
+            b"no authenticated security checks",
+            b"no exploitation",
+            b"no external cve",
+            b"point-in-time observations",
+            b"do not prove exploitability",
+            b"do not prove complete security",
+            b"do not prove exploitability, compromise, or complete security",
+        ):
+            self.assertIn(expected, rendered)
+
+    def test_html_report_handles_empty_ports_and_findings(self):
+        """Verify explicit safe empty states are rendered for legacy scans."""
+        scan_id = save_scan(
+            {"target": "legacy.local", "scan_started_at": "2026-07-30"},
+            {},
+            db_path=self.db_path,
+        )
+
+        response = self.client.get(f"/scans/{scan_id}/report")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(
+            b"No open ports were recorded within the limited top-100 TCP-port scan scope.",
+            response.data,
+        )
+        self.assertIn(
+            b"No rule-based security concerns were recorded for this limited assessment.",
+            response.data,
+        )
+        self.assertIn(b"does not prove that the target is fully secure", response.data)
 
     @patch("backend.app.analyze_scan")
     @patch("backend.app.run_scan")

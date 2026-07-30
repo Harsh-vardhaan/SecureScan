@@ -9,18 +9,26 @@ from typing import Any, Dict, List
 
 
 SEVERITY_LEVELS = ("Critical", "High", "Medium", "Low", "Info")
+SEVERITY_RANK = {severity: index for index, severity in enumerate(SEVERITY_LEVELS)}
+REPORT_VERSION = "1.0"
+REPORT_CLASSIFICATION = "Authorized Security Assessment"
 
 LIMITATIONS = [
-    "The assessment is limited to the ports and service information captured by the original scan.",
-    "Rule-based findings describe observable exposure or configuration risk and do not confirm exploitability.",
-    "Services that were filtered, unavailable, or outside the configured scan scope may not appear in this report.",
-    "Results represent a point-in-time assessment and may no longer reflect the target's current state.",
+    "The assessment is limited to the top 100 TCP ports captured by the original saved scan.",
+    "UDP ports and services were not assessed.",
+    "Service-version probing was limited and may not identify every product or version.",
+    "No authenticated security checks were performed.",
+    "No exploitation or intrusive validation was performed.",
+    "No external CVE or threat-intelligence correlation was performed.",
+    "Results are point-in-time observations and may not reflect the target's current state.",
+    "Rule-based findings indicate potential exposure or configuration risk and do not prove exploitability.",
+    "Missing findings do not prove complete security or that every vulnerability was identified.",
 ]
 
 DISCLAIMER = (
-    "SecureScan is intended for authorized defensive security assessment only. "
-    "This report does not certify that the target is secure and should be reviewed "
-    "by a qualified security professional in the context of the target environment."
+    "SecureScan produces transparent rule-based observations from limited saved "
+    "network scan data. These findings indicate potential exposure or configuration "
+    "risk and do not prove exploitability, compromise, or complete security."
 )
 
 
@@ -89,7 +97,14 @@ def _normalized_findings(value: Any) -> List[Dict[str, Any]]:
                 "confidence": _text(item.get("confidence")),
             }
         )
-    return findings
+    return sorted(
+        findings,
+        key=lambda finding: (
+            SEVERITY_RANK.get(finding["severity"], len(SEVERITY_LEVELS)),
+            finding["port"],
+            finding["title"].casefold(),
+        ),
+    )
 
 
 def _severity_counts(saved_counts: Any, findings: List[Dict[str, Any]]) -> Dict[str, int]:
@@ -106,21 +121,25 @@ def _severity_counts(saved_counts: Any, findings: List[Dict[str, Any]]) -> Dict[
     }
 
 
-def _recommendations(findings: List[Dict[str, Any]]) -> List[Dict[str, str]]:
-    """Return unique, actionable recommendations in finding order."""
+def _recommendations(findings: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Return stable, prioritized recommendations deduplicated by normalized text."""
     recommendations = []
     seen = set()
     for finding in findings:
         recommendation = finding["recommendation"]
-        if recommendation == "N/A" or recommendation in seen:
+        normalized = " ".join(recommendation.split()).casefold()
+        if recommendation == "N/A" or not normalized or normalized in seen:
             continue
-        seen.add(recommendation)
+        seen.add(normalized)
+        display_recommendation = " ".join(recommendation.split())
         recommendations.append(
             {
                 "rule_id": finding["rule_id"],
                 "title": finding["title"],
                 "severity": finding["severity"],
-                "recommendation": recommendation,
+                "port": finding["port"],
+                "protocol": finding["protocol"],
+                "recommendation": display_recommendation,
             }
         )
     return recommendations
@@ -153,16 +172,36 @@ def build_report_context(saved_scan: Dict[str, Any]) -> Dict[str, Any]:
 
     finding_count = len(findings)
     port_count = len(ports)
+    host_status = _text(saved_scan.get("host_status"), "unknown")
     executive_summary = (
-        f"The saved assessment of {target} recorded {port_count} open "
-        f"{'port' if port_count == 1 else 'ports'} and {finding_count} rule-based "
+        f"The saved assessment of {target}, with host status recorded as {host_status}, "
+        f"identified {port_count} open {'port' if port_count == 1 else 'ports'} within "
+        f"the limited top-100 TCP-port scope and {finding_count} rule-based "
         f"{'finding' if finding_count == 1 else 'findings'}. "
-        f"The overall recorded risk rating is {overall_risk}."
+    )
+    if findings:
+        concern = findings[0]
+        executive_summary += (
+            f"{overall_risk} was the highest recorded severity. "
+            f"The highest-priority recorded concern was {concern['title']} on "
+            f"{concern['protocol']}/{concern['port']}."
+        )
+    else:
+        executive_summary += (
+            f"The overall recorded risk rating was {overall_risk}. "
+            "No rule-based security concerns were recorded for this limited "
+            "assessment; this does not prove that the target is fully secure."
+        )
+    executive_summary += (
+        " Unnecessary services should be restricted, exposed services reviewed, "
+        "and saved finding recommendations applied by an authorized administrator."
     )
 
     return {
         "metadata": {
             "report_id": f"SSR-{scan_id:06d}",
+            "report_version": REPORT_VERSION,
+            "classification": REPORT_CLASSIFICATION,
             "scan_id": scan_id,
             "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC"),
             "scan_started_at": _text(saved_scan.get("scan_started_at")),
@@ -172,7 +211,7 @@ def build_report_context(saved_scan: Dict[str, Any]) -> Dict[str, Any]:
             "name": target,
             "hostname": _text(saved_scan.get("hostname")),
             "resolved_address": _text(saved_scan.get("resolved_address")),
-            "host_status": _text(saved_scan.get("host_status"), "unknown"),
+            "host_status": host_status,
             "scan_duration_seconds": _text(saved_scan.get("scan_duration_seconds"), "0"),
         },
         "executive_summary": executive_summary,

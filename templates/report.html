@@ -3,19 +3,19 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ report.metadata.report_id }} | SecureScan HTML Report</title>
+    <title>{{ report.metadata.report_id }} | SecureScan Professional Report</title>
     <style>
         :root { --navy: #0f172a; --slate: #475569; --line: #cbd5e1; --paper: #fff; --bg: #e2e8f0; --blue: #0369a1; }
         * { box-sizing: border-box; }
         body { margin: 0; background: var(--bg); color: var(--navy); font: 15px/1.55 Arial, sans-serif; }
-        .report { max-width: 1100px; margin: 32px auto; background: var(--paper); box-shadow: 0 10px 30px rgba(15,23,42,.15); }
+        .report { max-width: 1100px; margin: 32px auto; background: var(--paper); box-shadow: 0 10px 30px rgba(15,23,42,.15); overflow-wrap: anywhere; }
         header { padding: 42px 48px; color: white; background: linear-gradient(135deg, #0f172a, #075985); }
         header h1 { margin: 4px 0 8px; font-size: 32px; }
         header p { margin: 0; color: #bae6fd; }
         .eyebrow { text-transform: uppercase; letter-spacing: .12em; font-weight: 700; font-size: 12px; }
         main { padding: 36px 48px 48px; }
-        .actions { margin-bottom: 24px; }
-        .button { display: inline-block; padding: 9px 15px; border: 1px solid var(--blue); border-radius: 6px; color: var(--blue); text-decoration: none; font-weight: 700; }
+        .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 24px; }
+        .button { display: inline-block; padding: 9px 15px; border: 1px solid var(--blue); border-radius: 6px; background: white; color: var(--blue); text-decoration: none; font: inherit; font-weight: 700; cursor: pointer; }
         .metadata, .severity-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
         .card { padding: 16px; border: 1px solid var(--line); border-radius: 8px; background: #f8fafc; }
         .label { display: block; margin-bottom: 4px; color: var(--slate); font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }
@@ -24,21 +24,37 @@
         table { width: 100%; border-collapse: collapse; font-size: 14px; }
         th, td { padding: 10px; border: 1px solid var(--line); text-align: left; vertical-align: top; }
         th { background: #e0f2fe; }
+        .table-wrap { width: 100%; overflow-x: auto; }
         .risk, .severity { font-weight: 700; }
         .Critical, .High { color: #b91c1c; } .Medium { color: #b45309; } .Low { color: #0369a1; } .Info { color: #475569; }
         .recommendation { margin: 0 0 12px; padding: 14px 16px; border-left: 4px solid #0ea5e9; background: #f8fafc; }
         .muted { color: var(--slate); }
         footer { padding: 24px 48px; background: #f1f5f9; border-top: 1px solid var(--line); font-size: 13px; color: var(--slate); }
-        @media (max-width: 700px) { .report { margin: 0; } header, main, footer { padding-left: 20px; padding-right: 20px; } table { display: block; overflow-x: auto; } }
-        @media print { body { background: white; } .report { margin: 0; max-width: none; box-shadow: none; } .actions { display: none; } section, tr { break-inside: avoid; } }
+        @media (max-width: 800px) { .report { margin: 0; } header, main, footer { padding-left: 20px; padding-right: 20px; } header h1 { font-size: 27px; } }
+        @media print {
+            @page { margin: 16mm; }
+            body { background: white; font-size: 11pt; }
+            .report { margin: 0; max-width: none; box-shadow: none; }
+            .actions { display: none; }
+            h2 { break-after: avoid-page; }
+            thead { display: table-header-group; }
+            tr, .card, .recommendation { break-inside: avoid; }
+            .table-wrap { overflow: visible; }
+            footer { break-before: avoid-page; }
+        }
     </style>
 </head>
 <body>
 <article class="report">
     <header>
-        <div class="eyebrow">SecureScan Security Assessment</div>
-        <h1>Vulnerability Assessment Report</h1>
-        <p>Report ID {{ report.metadata.report_id }} · Generated {{ report.metadata.generated_at }}</p>
+        <div class="eyebrow">SecureScan | Automated Vulnerability Assessment Platform</div>
+        <h1>Professional Vulnerability Assessment Report</h1>
+        <p>
+            Report ID {{ report.metadata.report_id }} |
+            Version {{ report.metadata.report_version }} |
+            Generated {{ report.metadata.generated_at }}
+        </p>
+        <p>Classification: {{ report.metadata.classification }}</p>
     </header>
     <main>
         <nav class="actions" aria-label="Report actions">
@@ -51,6 +67,8 @@
             <h2 id="assessment-details">Assessment Details</h2>
             <div class="metadata">
                 <div class="card"><span class="label">Report ID</span>{{ report.metadata.report_id }}</div>
+                <div class="card"><span class="label">Report version</span>{{ report.metadata.report_version }}</div>
+                <div class="card"><span class="label">Classification</span>{{ report.metadata.classification }}</div>
                 <div class="card"><span class="label">Target</span>{{ report.target.name }}</div>
                 <div class="card"><span class="label">Host status</span>{{ report.target.host_status }}</div>
                 <div class="card"><span class="label">Overall risk</span><span class="risk {{ report.overall_risk }}">{{ report.overall_risk }}</span></div>
@@ -59,6 +77,15 @@
                 <div class="card"><span class="label">Scan started</span>{{ report.metadata.scan_started_at }}</div>
                 <div class="card"><span class="label">Duration</span>{{ report.target.scan_duration_seconds }} seconds</div>
             </div>
+        </section>
+
+        <section>
+            <h2>Authorization and Scope</h2>
+            <p>
+                This report documents an authorized, limited network assessment of the
+                top 100 TCP ports using limited service-version probing. No UDP assessment,
+                authenticated checks, exploitation, or external CVE correlation was performed.
+            </p>
         </section>
 
         <section>
@@ -78,6 +105,7 @@
         <section>
             <h2>Open Ports</h2>
             {% if report.open_ports %}
+            <div class="table-wrap">
             <table>
                 <thead><tr><th>Port</th><th>Protocol</th><th>State</th><th>Service</th><th>Product</th><th>Version</th></tr></thead>
                 <tbody>
@@ -86,12 +114,14 @@
                 {% endfor %}
                 </tbody>
             </table>
-            {% else %}<p class="muted">No open ports were recorded in this saved assessment.</p>{% endif %}
+            </div>
+            {% else %}<p class="muted">No open ports were recorded within the limited top-100 TCP-port scan scope.</p>{% endif %}
         </section>
 
         <section>
             <h2>Findings</h2>
             {% if report.findings %}
+            <div class="table-wrap">
             <table>
                 <thead><tr><th>Rule</th><th>Finding</th><th>Severity</th><th>Asset evidence</th><th>Confidence</th></tr></thead>
                 <tbody>
@@ -99,21 +129,26 @@
                     <tr>
                         <td>{{ finding.rule_id }}</td>
                         <td><strong>{{ finding.title }}</strong><br><span class="muted">{{ finding.description }}</span></td>
-                        <td><span class="severity {{ finding.severity }}">{{ finding.severity }}</span></td>
+                        <td><span class="severity {{ finding.severity }}">{{ finding.severity }} severity</span></td>
                         <td>{{ finding.evidence }}</td>
                         <td>{{ finding.confidence }}</td>
                     </tr>
                 {% endfor %}
                 </tbody>
             </table>
-            {% else %}<p class="muted">No rule-based security findings were recorded.</p>{% endif %}
+            </div>
+            {% else %}<p class="muted">No rule-based security concerns were recorded for this limited assessment. This does not prove that the target is fully secure.</p>{% endif %}
         </section>
 
         <section>
             <h2>Recommendations</h2>
             {% if report.recommendations %}
                 {% for item in report.recommendations %}
-                <div class="recommendation"><strong>{{ item.rule_id }} — {{ item.title }}</strong><br>{{ item.recommendation }}</div>
+                <div class="recommendation">
+                    <strong>[{{ item.severity }}] {{ item.rule_id }} - {{ item.title }}</strong>
+                    <br><span class="muted">Affected service: {{ item.protocol }}/{{ item.port }}</span>
+                    <br>{{ item.recommendation }}
+                </div>
                 {% endfor %}
             {% else %}<p class="muted">No finding-specific recommendations were generated. Continue routine monitoring and security review.</p>{% endif %}
         </section>

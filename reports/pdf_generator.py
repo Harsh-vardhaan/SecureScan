@@ -11,7 +11,6 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import mm
 from reportlab.platypus import (
-    PageBreak,
     Paragraph,
     SimpleDocTemplate,
     Spacer,
@@ -66,12 +65,12 @@ def _styles() -> Dict[str, ParagraphStyle]:
         "heading": ParagraphStyle(
             "SecureScanHeading", parent=sample["Heading2"], fontName="Helvetica-Bold",
             fontSize=15, leading=19, textColor=colors.HexColor("#075985"),
-            spaceBefore=10, spaceAfter=8,
+            spaceBefore=10, spaceAfter=8, keepWithNext=1,
         ),
         "finding": ParagraphStyle(
             "SecureScanFinding", parent=sample["Heading3"], fontName="Helvetica-Bold",
             fontSize=11, leading=14, textColor=colors.HexColor("#0F172A"),
-            spaceAfter=5,
+            spaceAfter=5, keepWithNext=1,
         ),
         "body": ParagraphStyle(
             "SecureScanBody", parent=sample["BodyText"], fontName="Helvetica",
@@ -168,14 +167,19 @@ def generate_pdf_report(report_context: Dict[str, Any]) -> bytes:
         Paragraph("SecureScan", styles["title"]),
         Paragraph("Automated Vulnerability Assessment Platform", styles["subtitle"]),
         Spacer(1, 5 * mm),
-        Paragraph("Vulnerability Assessment Report", styles["title"]),
+        Paragraph("Professional Vulnerability Assessment Report", styles["title"]),
         Spacer(1, 4 * mm),
         _detail_table(
             [
                 ("Report ID", metadata.get("report_id")),
+                ("Report version", metadata.get("report_version", REPORT_VERSION)),
                 ("Generated", metadata.get("generated_at")),
                 ("Target", target.get("name")),
                 ("Overall risk", context.get("overall_risk", "Info")),
+                (
+                    "Classification",
+                    metadata.get("classification", "Authorized Security Assessment"),
+                ),
             ],
             styles,
         ),
@@ -230,7 +234,7 @@ def generate_pdf_report(report_context: Dict[str, Any]) -> bytes:
             ]
         )
     )
-    story.extend([severity_table, PageBreak(), _section("Open Ports", styles)])
+    story.extend([severity_table, Spacer(1, 4 * mm), _section("Open Ports", styles)])
 
     if ports:
         headers = ("Port", "Protocol", "State", "Service", "Product", "Version")
@@ -267,7 +271,12 @@ def generate_pdf_report(report_context: Dict[str, Any]) -> bytes:
         )
         story.append(port_table)
     else:
-        story.append(Paragraph("No open ports were recorded in this saved assessment.", styles["body"]))
+        story.append(
+            Paragraph(
+                "No open ports were recorded within the limited top-100 TCP-port scan scope.",
+                styles["body"],
+            )
+        )
 
     story.append(_section("Security Findings", styles))
     if findings:
@@ -312,7 +321,13 @@ def generate_pdf_report(report_context: Dict[str, Any]) -> bytes:
                 ]
             )
     else:
-        story.append(Paragraph("No rule-based security findings were recorded.", styles["body"]))
+        story.append(
+            Paragraph(
+                "No rule-based security concerns were recorded for this limited assessment. "
+                "This does not prove that the target is fully secure.",
+                styles["body"],
+            )
+        )
 
     story.append(_section("Prioritized Recommendations", styles))
     if recommendations:
@@ -322,10 +337,15 @@ def generate_pdf_report(report_context: Dict[str, Any]) -> bytes:
             key=lambda item: rank.get(str(item.get("severity")), len(SEVERITY_ORDER)),
         )
         for index, item in enumerate(prioritized, start=1):
+            affected_service = (
+                f"{_safe_text(item.get('protocol'), 'TCP')}/"
+                f"{_safe_text(item.get('port'), '0')}"
+            )
             story.append(
                 Paragraph(
                     f"<b>{index}. [{_safe_text(item.get('severity'), 'Info')}] "
-                    f"{_safe_text(item.get('title'), 'Security observation')}</b><br/>"
+                    f"{_safe_text(item.get('title'), 'Security observation')} "
+                    f"({affected_service})</b><br/>"
                     f"{_safe_text(item.get('recommendation'))}",
                     styles["body"],
                 )
