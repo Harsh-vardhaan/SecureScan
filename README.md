@@ -41,7 +41,7 @@ vulnerability assessment application.
 - Provides a side-effect-free process health endpoint.
 - Includes a multi-stage Docker build, Gunicorn, a non-root runtime user,
   health checks, and persistent database storage.
-- Includes 71 automated tests with scanner activity mocked.
+- Includes 85 automated tests with scanner activity mocked.
 
 ## Technology Stack
 
@@ -59,30 +59,7 @@ vulnerability assessment application.
 
 ## Architecture Overview
 
-```text
-Browser
-   |
-   v
-Flask routes and templates
-   |
-   +--> Target validator
-   |       |
-   |       v
-   |    Controlled Nmap scanner
-   |       |
-   |       v
-   |    Rule-based analyzer
-   |
-   +--> SQLite persistence
-   |       |
-   |       +--> Recent scan history
-   |       +--> Historical scan detail
-   |
-   +--> Normalized report context
-           |
-           +--> HTML report
-           +--> In-memory PDF report
-```
+![SecureScan architecture showing the authorized assessment and stored-report flow](docs/images/architecture.svg)
 
 New assessments follow the validation, scanning, analysis, and persistence path.
 Historical detail and report routes load existing SQLite records; they do not
@@ -219,7 +196,7 @@ python -m unittest discover -s tests -p "test_*.py"
 python -m compileall backend scanner vulnerability database reports
 ```
 
-The current suite contains 71 tests covering validation, analysis, persistence,
+The current suite contains 85 tests covering validation, analysis, persistence,
 Flask routes, saved reports, PDF generation, and Docker configuration.
 
 ## Docker Testing
@@ -302,22 +279,39 @@ the analyzer.
 - Improve accessibility and live readiness reporting in the dashboard.
 - Add continuous integration for tests and Docker verification.
 - Add structured application metrics and operational observability.
-- Add sanitized portfolio screenshots and an architecture illustration.
 
 These are roadmap ideas, not current capabilities.
 
 ## Screenshots
 
-Screenshot assets are planned for the following repository paths. They are not
-included yet:
+All screenshots below use synthetic demonstration data or localhost. They do not
+represent a scan of an external system.
 
-| Dashboard | Historical scan report |
+| Dashboard | Saved assessment results |
 | --- | --- |
-| `docs/images/dashboard.png` | `docs/images/report.png` |
+| ![SecureScan dashboard with bounded scan scope](docs/images/dashboard.png) | ![Historical SecureScan result using synthetic data](docs/images/scan-results.png) |
+| Authorization, bounded scope, and application overview | Stored ports, rule-based findings, and remediation guidance |
 
-| Scan history |
-| --- |
-| `docs/images/history.png` |
+### Scan history
+
+![SecureScan history table populated with synthetic demonstration records](docs/images/history.png)
+
+Recent assessments are loaded from SQLite and link to saved detail and report
+views.
+
+### HTML report
+
+![SecureScan professional HTML report generated from synthetic saved data](docs/images/html-report.png)
+
+The HTML report is generated from a saved assessment without rerunning Nmap or
+the analyzer.
+
+### PDF report
+
+![First page of a SecureScan PDF report generated from synthetic saved data](docs/images/pdf-report.png)
+
+PDF reports are generated in memory with ReportLab from the same normalized,
+stored-data report context.
 
 ## License
 

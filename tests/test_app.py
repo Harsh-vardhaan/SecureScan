@@ -17,10 +17,18 @@ All database tests use isolated temporary SQLite files.
 import os
 import tempfile
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
 from backend.app import _env_flag, _local_port, app
-from database.db import get_scan_by_id, initialize_database, save_scan
+from database.db import (
+    DatabaseError,
+    get_connection,
+    get_recent_scans,
+    get_scan_by_id,
+    initialize_database,
+    save_scan,
+)
 from scanner.nmap_scanner import ScannerUnavailableError
 
 
@@ -50,6 +58,73 @@ class TestFlaskRoutes(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn(b"SecureScan", response.data)
         self.assertIn(b"Automated Vulnerability Assessment", response.data)
+
+    def test_dashboard_presents_bounded_scope_and_accessibility_landmarks(self):
+        """Verify portfolio wording remains cautious and keyboard accessible."""
+        response = self.client.get("/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"Web Service Online", response.data)
+        self.assertNotIn(b"Engine:</span>", response.data)
+        self.assertIn(b"Skip to main content", response.data)
+        self.assertIn(b'id="main-content"', response.data)
+        self.assertIn(b'aria-live="polite"', response.data)
+        self.assertIn(b"one authorized target at a time", response.data)
+        self.assertIn(b"top 100 TCP", response.data)
+        self.assertIn(b"No UDP scanning or exploitation", response.data)
+        self.assertNotIn(b"scanme.nmap.org", response.data)
+        self.assertNotIn(b'id="newScanControl"', response.data)
+        self.assertIn(b"/static/js/dashboard.js", response.data)
+
+    def test_dashboard_javascript_supports_client_side_new_scan_reset(self):
+        """Verify the focused reset handler preserves progressive enhancement."""
+        script_path = Path(__file__).parents[1] / "static" / "js" / "dashboard.js"
+        script = script_path.read_text(encoding="utf-8")
+
+        self.assertIn('event.preventDefault()', script)
+        self.assertIn('resultSection.hidden = true', script)
+        self.assertIn('targetInput.value = ""', script)
+        self.assertIn('authorizationCheckbox.checked = false', script)
+        self.assertIn('startButton.disabled = false', script)
+        self.assertIn('buttonText.textContent = "Start Scan"', script)
+        self.assertIn('scanForm.scrollIntoView', script)
+        self.assertIn('prefers-reduced-motion: reduce', script)
+        self.assertIn('targetInput.focus({ preventScroll: true })', script)
+
+    def test_shared_confirmation_script_supports_accessible_modal_behavior(self):
+        """Verify focus management, Escape, and deliberate form submission."""
+        script_path = Path(__file__).parents[1] / "static" / "js" / "confirm-modal.js"
+        script = script_path.read_text(encoding="utf-8")
+
+        self.assertIn('cancelButton.focus()', script)
+        self.assertIn('openingControl.focus()', script)
+        self.assertIn('event.key === "Escape"', script)
+        self.assertIn('event.key !== "Tab"', script)
+        self.assertIn("field.disabled = false", script)
+        self.assertIn('activeForm.requestSubmit()', script)
+        self.assertNotIn("window.confirm", script)
+
+    @patch("backend.app.run_scan")
+    def test_new_scan_fallback_get_preserves_history_without_scanning(self, mock_run_scan):
+        """Verify the fallback dashboard load keeps saved data and never scans."""
+        scan_id = save_scan(
+            {
+                "target": "new-scan-history.local",
+                "host_status": "up",
+                "scan_started_at": "2026-07-31 12:00:00",
+                "open_ports": [],
+            },
+            None,
+            db_path=self.db_path,
+        )
+
+        response = self.client.get("/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"new-scan-history.local", response.data)
+        self.assertIn(f"/scans/{scan_id}".encode(), response.data)
+        self.assertNotIn(b'id="newScanControl"', response.data)
+        mock_run_scan.assert_not_called()
 
     @patch("backend.app.analyze_scan")
     @patch("backend.app.run_scan")
@@ -193,7 +268,18 @@ class TestFlaskRoutes(unittest.TestCase):
         self.assertIn(b"Apache httpd", response.data)
         self.assertIn(b"2.4.52", response.data)
         self.assertIn(b"Security Analysis", response.data)
+        self.assertIn(b"Rule-Based Risk Rating", response.data)
         self.assertIn(b"SS-HTTP-001", response.data)
+        self.assertIn(b'id="newScanControl"', response.data)
+        self.assertIn(b"New Scan", response.data)
+        self.assertIn(b'href="/"', response.data)
+        self.assertIn(b"Recent Scan History", response.data)
+        self.assertIn(b"127.0.0.1", response.data)
+        saved_scan_id = get_recent_scans(limit=1, db_path=self.db_path)[0]["id"]
+        self.assertIn(f"/scans/{saved_scan_id}/report".encode(), response.data)
+        self.assertIn(f"/scans/{saved_scan_id}/report.pdf".encode(), response.data)
+        self.assertIn(b"View HTML Report", response.data)
+        self.assertIn(b"Download PDF Report", response.data)
         mock_run_scan.assert_called_once_with("127.0.0.1")
 
     @patch("backend.app.run_scan")
@@ -306,6 +392,8 @@ class TestFlaskRoutes(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn(b"Scan Results:", response.data)
         self.assertIn(b"The scan completed, but the result could not be saved to history.", response.data)
+        self.assertNotIn(b"View HTML Report", response.data)
+        self.assertNotIn(b"Download PDF Report", response.data)
 
     @patch("backend.app.run_scan")
     def test_post_handles_scanner_unavailable(self, mock_run_scan):
@@ -556,13 +644,154 @@ class TestFlaskRoutes(unittest.TestCase):
             db_path=self.db_path,
         )
 
-        response = self.client.post(f"/scans/{scan_id}/delete", follow_redirects=True)
+        response = self.client.post(
+            f"/scans/{scan_id}/delete",
+            data={"confirmed": "1"},
+            follow_redirects=True,
+        )
         self.assertEqual(response.status_code, 200)
         self.assertIn(b"successfully deleted", response.data)
 
         # Confirm scan is deleted
         detail_resp = self.client.get(f"/scans/{scan_id}")
         self.assertEqual(detail_resp.status_code, 404)
+
+    def test_initial_dashboard_hides_current_report_and_clear_actions(self):
+        """Verify result-only and history-only controls are absent when empty."""
+        response = self.client.get("/")
+
+        self.assertNotIn(b"View HTML Report", response.data)
+        self.assertNotIn(b"Download PDF Report", response.data)
+        self.assertNotIn(b"Clear Scan History", response.data)
+
+    def test_clear_history_control_and_reusable_modal_markup_render(self):
+        """Verify destructive controls supply shared modal metadata."""
+        scan_id = save_scan(
+            {"target": "modal-test.local", "scan_started_at": "2026-07-31"},
+            {},
+            db_path=self.db_path,
+        )
+
+        dashboard = self.client.get("/")
+        detail = self.client.get(f"/scans/{scan_id}")
+
+        for response in (dashboard, detail):
+            self.assertIn(b'data-confirm-modal', response.data)
+            self.assertIn(b'role="dialog"', response.data)
+            self.assertIn(b'aria-modal="true"', response.data)
+            self.assertIn(b"/static/js/confirm-modal.js", response.data)
+        self.assertIn(b"Clear Scan History", dashboard.data)
+        self.assertIn(b"Delete Saved Scan", dashboard.data)
+        self.assertIn(b"Delete this saved scan record?", dashboard.data)
+        self.assertIn(b"Delete all saved scan records?", dashboard.data)
+        self.assertNotIn(b"window.confirm", dashboard.data)
+        self.assertNotIn(b"return confirm", dashboard.data)
+
+    def test_unconfirmed_destructive_post_uses_safe_fallback(self):
+        """Verify no-JavaScript submissions require a second confirmation."""
+        scan_id = save_scan(
+            {"target": "fallback-delete.local", "scan_started_at": "2026-07-31"},
+            {},
+            db_path=self.db_path,
+        )
+
+        response = self.client.post(f"/scans/{scan_id}/delete")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"Delete Saved Scan", response.data)
+        self.assertIn(b"Delete this saved scan record?", response.data)
+        self.assertIsNotNone(get_scan_by_id(scan_id, db_path=self.db_path))
+
+    def test_unconfirmed_clear_history_uses_safe_fallback(self):
+        """Verify no-JavaScript bulk clearing preserves records until confirmed."""
+        scan_id = save_scan(
+            {"target": "fallback-clear.local", "scan_started_at": "2026-07-31"},
+            {},
+            db_path=self.db_path,
+        )
+
+        response = self.client.post("/scans/clear")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"Clear Scan History", response.data)
+        self.assertIn(b"Delete all saved scan records?", response.data)
+        self.assertIn(b"This cannot be undone.", response.data)
+        self.assertIsNotNone(get_scan_by_id(scan_id, db_path=self.db_path))
+
+    def test_clear_scan_history_rejects_get(self):
+        """Verify bulk deletion cannot be invoked with GET."""
+        self.assertEqual(self.client.get("/scans/clear").status_code, 405)
+
+    @patch("backend.app.analyze_scan")
+    @patch("backend.app.run_scan")
+    def test_clear_scan_history_removes_all_records_without_scanning(
+        self, mock_run_scan, mock_analyze_scan
+    ):
+        """Verify confirmed POST cascades and never invokes assessment code."""
+        scan_id = save_scan(
+            {
+                "target": "clear-route.local",
+                "open_ports": [
+                    {"port": 80, "protocol": "TCP", "state": "open", "service": "http"}
+                ],
+            },
+            {
+                "overall_risk": "Medium",
+                "finding_count": 1,
+                "findings": [
+                    {
+                        "rule_id": "CLEAR-ROUTE-001",
+                        "title": "Synthetic finding",
+                        "severity": "Medium",
+                        "port": 80,
+                        "protocol": "TCP",
+                    }
+                ],
+            },
+            db_path=self.db_path,
+        )
+
+        response = self.client.post(
+            "/scans/clear",
+            data={"confirmed": "1"},
+            follow_redirects=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"All saved scan records were deleted.", response.data)
+        self.assertIsNone(get_scan_by_id(scan_id, db_path=self.db_path))
+        conn = get_connection(self.db_path)
+        self.assertEqual(conn.execute("SELECT COUNT(*) FROM open_ports").fetchone()[0], 0)
+        self.assertEqual(conn.execute("SELECT COUNT(*) FROM findings").fetchone()[0], 0)
+        conn.close()
+        mock_run_scan.assert_not_called()
+        mock_analyze_scan.assert_not_called()
+
+    def test_clear_empty_history_is_safe(self):
+        """Verify confirmed clearing of an empty history is controlled."""
+        response = self.client.post(
+            "/scans/clear",
+            data={"confirmed": "1"},
+            follow_redirects=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"Scan history is already empty.", response.data)
+
+    @patch("backend.app.clear_scan_history")
+    def test_clear_history_database_failure_is_controlled(self, mock_clear):
+        """Verify database details are not exposed when bulk clearing fails."""
+        mock_clear.side_effect = DatabaseError("private database path detail")
+
+        response = self.client.post(
+            "/scans/clear",
+            data={"confirmed": "1"},
+            follow_redirects=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"Scan history could not be cleared. Please try again.", response.data)
+        self.assertNotIn(b"private database path detail", response.data)
 
 
 if __name__ == "__main__":

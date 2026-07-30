@@ -24,6 +24,7 @@ from database.db import (
     get_recent_scans,
     get_scan_by_id,
     delete_scan,
+    clear_scan_history,
     get_connection,
     DatabaseError,
 )
@@ -334,6 +335,52 @@ class TestDatabaseOperations(unittest.TestCase):
         """Verify delete_scan returns False when attempting to delete non-existent scan ID."""
         result = delete_scan(99999, db_path=self.db_path)
         self.assertFalse(result)
+
+    def test_clear_scan_history_removes_all_parent_and_child_records(self):
+        """Verify bulk clearing cascades while preserving the SQLite schema."""
+        scan = {
+            "target": "clear-history.local",
+            "open_ports": [
+                {
+                    "port": 80,
+                    "protocol": "TCP",
+                    "state": "open",
+                    "service": "http",
+                }
+            ],
+        }
+        analysis = {
+            "overall_risk": "Medium",
+            "finding_count": 1,
+            "findings": [
+                {
+                    "rule_id": "TEST-CLEAR-001",
+                    "title": "Synthetic finding",
+                    "severity": "Medium",
+                    "port": 80,
+                    "protocol": "TCP",
+                }
+            ],
+        }
+        save_scan(scan, analysis, db_path=self.db_path)
+        save_scan(scan, analysis, db_path=self.db_path)
+
+        deleted_count = clear_scan_history(db_path=self.db_path)
+
+        self.assertEqual(deleted_count, 2)
+        conn = get_connection(self.db_path)
+        for table in ("scans", "open_ports", "findings"):
+            count = conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
+            self.assertEqual(count, 0)
+        schema_count = conn.execute(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'scans'"
+        ).fetchone()[0]
+        conn.close()
+        self.assertEqual(schema_count, 1)
+
+    def test_clear_scan_history_returns_zero_when_empty(self):
+        """Verify clearing an empty database is safe and idempotent."""
+        self.assertEqual(clear_scan_history(db_path=self.db_path), 0)
 
     def test_multiple_scans_remain_isolated(self):
         """Verify multiple saved scans do not cross-contaminate open ports or findings."""

@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }} | SecureScan{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="cyber-card mx-auto p-4 p-md-5 text-center" style="max-width: 620px;">
+        <i class="bi bi-exclamation-triangle-fill text-warning fs-1" aria-hidden="true"></i>
+        <h1 class="h3 text-light fw-bold mt-3">{{ title }}</h1>
+        <p class="text-light fs-5 mb-2">{{ message }}</p>
+        <p class="text-muted mb-4">{{ supporting_text }}</p>
+        <form action="{{ action_url }}" method="POST">
+            <input type="hidden" name="confirmed" value="1">
+            <div class="d-flex flex-column-reverse flex-sm-row justify-content-center gap-2">
+                <a class="btn btn-outline-secondary" href="{{ url_for('home') }}">Cancel</a>
+                <button class="btn btn-danger" type="submit">{{ action_label }}</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -57,6 +57,7 @@ from database.db import (
     get_recent_scans,
     get_scan_by_id,
     delete_scan,
+    clear_scan_history,
     DatabaseError,
 )
 
@@ -151,6 +152,7 @@ def home():
                 analysis_error = "Rule-based security analysis could not be completed for this scan."
 
             # 5. Persist scan and analysis results into SQLite
+            saved_scan_id = None
             try:
                 saved_scan_id = save_scan(scan_result, analysis_result, db_path=db_path)
                 logger.info(f"Successfully saved scan ID {saved_scan_id} for target {normalized_target}.")
@@ -170,7 +172,8 @@ def home():
                 analysis_result=analysis_result,
                 analysis_error=analysis_error,
                 target=normalized_target,
-                recent_scans=recent_scans
+                recent_scans=recent_scans,
+                saved_scan_id=saved_scan_id,
             )
 
         except ScannerUnavailableError as e:
@@ -281,6 +284,16 @@ def delete_scan_route(scan_id: int):
     Cascade-deletes related ports and findings, then redirects to dashboard.
     """
     db_path = _get_active_db_path()
+    if request.form.get("confirmed") != "1":
+        return render_template(
+            "confirm_destructive_action.html",
+            title="Delete Saved Scan",
+            message="Delete this saved scan record?",
+            supporting_text="This cannot be undone.",
+            action_label="Delete Scan",
+            action_url=url_for("delete_scan_route", scan_id=scan_id),
+        )
+
     try:
         deleted = delete_scan(scan_id, db_path=db_path)
         if deleted:
@@ -290,6 +303,33 @@ def delete_scan_route(scan_id: int):
     except Exception as e:
         logger.error(f"Failed to delete scan ID {scan_id}: {e}")
         flash(f"An error occurred while deleting scan #{scan_id}.", "error")
+
+    return redirect(url_for("home"))
+
+
+@app.route("/scans/clear", methods=["POST"])
+def clear_scan_history_route():
+    """Delete all saved scan records after explicit confirmation."""
+    if request.form.get("confirmed") != "1":
+        return render_template(
+            "confirm_destructive_action.html",
+            title="Clear Scan History",
+            message="Delete all saved scan records?",
+            supporting_text="This cannot be undone.",
+            action_label="Clear History",
+            action_url=url_for("clear_scan_history_route"),
+        )
+
+    db_path = _get_active_db_path()
+    try:
+        deleted_count = clear_scan_history(db_path=db_path)
+        if deleted_count:
+            flash("All saved scan records were deleted.", "success")
+        else:
+            flash("Scan history is already empty.", "info")
+    except DatabaseError:
+        logger.exception("Failed to clear saved scan history.")
+        flash("Scan history could not be cleared. Please try again.", "error")
 
     return redirect(url_for("home"))
 

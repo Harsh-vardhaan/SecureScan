@@ -16,6 +16,9 @@
         main { padding: 36px 48px 48px; }
         .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 24px; }
         .button { display: inline-block; padding: 9px 15px; border: 1px solid var(--blue); border-radius: 6px; background: white; color: var(--blue); text-decoration: none; font: inherit; font-weight: 700; cursor: pointer; }
+        .button:focus-visible, .skip-link:focus-visible { outline: 3px solid #f59e0b; outline-offset: 3px; }
+        .skip-link { position: fixed; top: 8px; left: 8px; z-index: 10; padding: 9px 14px; border-radius: 6px; background: white; color: var(--navy); transform: translateY(-150%); }
+        .skip-link:focus { transform: translateY(0); }
         .metadata, .severity-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
         .card { padding: 16px; border: 1px solid var(--line); border-radius: 8px; background: #f8fafc; }
         .label { display: block; margin-bottom: 4px; color: var(--slate); font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }
@@ -45,6 +48,7 @@
     </style>
 </head>
 <body>
+<a class="skip-link" href="#report-content">Skip to report content</a>
 <article class="report">
     <header>
         <div class="eyebrow">SecureScan | Automated Vulnerability Assessment Platform</div>
@@ -56,7 +60,7 @@
         </p>
         <p>Classification: {{ report.metadata.classification }}</p>
     </header>
-    <main>
+    <main id="report-content" tabindex="-1">
         <nav class="actions" aria-label="Report actions">
             <a class="button" href="{{ url_for('view_scan', scan_id=report.metadata.scan_id) }}">Back to Scan Detail</a>
             <a class="button" href="{{ url_for('download_scan_report', scan_id=report.metadata.scan_id) }}">Download PDF</a>
@@ -107,6 +111,7 @@
             {% if report.open_ports %}
             <div class="table-wrap">
             <table>
+                <caption>Open TCP ports recorded in the saved assessment</caption>
                 <thead><tr><th>Port</th><th>Protocol</th><th>State</th><th>Service</th><th>Product</th><th>Version</th></tr></thead>
                 <tbody>
                 {% for port in report.open_ports %}
@@ -123,6 +128,7 @@
             {% if report.findings %}
             <div class="table-wrap">
             <table>
+                <caption>Rule-based findings recorded in the saved assessment</caption>
                 <thead><tr><th>Rule</th><th>Finding</th><th>Severity</th><th>Asset evidence</th><th>Confidence</th></tr></thead>
                 <tbody>
                 {% for finding in report.findings %}

@@ -403,3 +403,24 @@ def delete_scan(scan_id: int, db_path: Optional[str] = None) -> bool:
         raise DatabaseError(f"Failed to delete scan ID {scan_id}: {e}") from e
     finally:
         conn.close()
+
+
+def clear_scan_history(db_path: Optional[str] = None) -> int:
+    """Delete every saved scan while preserving the database and schema."""
+    conn = get_connection(db_path)
+    try:
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM scans")
+        deleted_count = max(cursor.rowcount, 0)
+        conn.commit()
+        logger.info(
+            "Cleared %s saved scan record(s) and associated child records.",
+            deleted_count,
+        )
+        return deleted_count
+    except sqlite3.Error as e:
+        conn.rollback()
+        logger.error(f"Error clearing saved scan history: {e}")
+        raise DatabaseError("Failed to clear saved scan history.") from e
+    finally:
+        conn.close()

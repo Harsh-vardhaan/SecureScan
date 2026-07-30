@@ -54,6 +54,11 @@
                 <p class="text-muted small mb-3">
                     Enter an IPv4 address, IPv6 address, or host domain name to perform network port scanning and service detection.
                 </p>
+                <div class="scope-notice small mb-3" role="note" aria-label="Assessment scope">
+                    <i class="bi bi-bounding-box-circles text-info me-2" aria-hidden="true"></i>
+                    <strong>Limited scope:</strong> one authorized target at a time, top 100 TCP
+                    ports, and light service-version detection. No UDP scanning or exploitation.
+                </div>
 
                 <!-- ERROR BANNER DISPLAY -->
                 {% if error %}
@@ -108,14 +113,12 @@
 
                 <!-- Scan Profile Helper Badges -->
                 <div class="d-flex flex-wrap gap-2 mt-3 pt-2 border-top border-secondary border-opacity-25">
-                    <span class="text-muted small align-self-center me-2">Target Presets:</span>
+                    <span class="text-muted small align-self-center me-2">Safe local preset:</span>
                     <button type="button" class="btn btn-sm btn-outline-secondary text-light rounded-pill py-0 px-2 fs-7" onclick="document.getElementById('targetInput').value='127.0.0.1';">
                         Localhost (127.0.0.1)
                     </button>
-                    <button type="button" class="btn btn-sm btn-outline-secondary text-light rounded-pill py-0 px-2 fs-7" onclick="document.getElementById('targetInput').value='scanme.nmap.org';">
-                        Nmap Test Server (scanme.nmap.org)
-                    </button>
                 </div>
+                <p id="scanStatus" class="visually-hidden" role="status" aria-live="polite"></p>
             </div>
         </div>
     </div>
@@ -143,10 +146,23 @@
                             Scan Results: <span class="text-info">{{ scan_result.target }}</span>
                         </h4>
                     </div>
-                    <div class="text-md-end">
+                    <div class="text-md-end d-flex flex-column align-items-md-end gap-2">
                         <span class="badge bg-dark border border-secondary text-light px-3 py-2 fs-7">
                             <i class="bi bi-stopwatch text-info me-1"></i> Duration: {{ scan_result.scan_duration_seconds }}s
                         </span>
+                        <div class="d-flex flex-wrap justify-content-md-end gap-2">
+                            {% if saved_scan_id %}
+                            <a href="{{ url_for('view_scan_report', scan_id=saved_scan_id) }}" class="btn btn-sm btn-outline-info rounded-pill px-3">
+                                <i class="bi bi-file-earmark-text me-1" aria-hidden="true"></i>View HTML Report
+                            </a>
+                            <a href="{{ url_for('download_scan_report', scan_id=saved_scan_id) }}" class="btn btn-sm btn-outline-light rounded-pill px-3">
+                                <i class="bi bi-file-earmark-pdf me-1" aria-hidden="true"></i>Download PDF Report
+                            </a>
+                            {% endif %}
+                            <a href="{{ url_for('home') }}" class="btn btn-sm btn-outline-info rounded-pill px-3" id="newScanControl">
+                                <i class="bi bi-plus-circle me-1" aria-hidden="true"></i>New Scan
+                            </a>
+                        </div>
                     </div>
                 </div>
 
@@ -200,6 +216,7 @@
                 {% if scan_result.open_port_count > 0 %}
                 <div class="table-responsive mb-3">
                     <table class="table table-cyber align-middle mb-0">
+                        <caption class="visually-hidden">Open TCP ports and detected service information for the current assessment.</caption>
                         <thead>
                             <tr>
                                 <th scope="col">Port</th>
@@ -266,10 +283,10 @@
                             <h5 class="text-light fw-bold mb-1">
                                 <i class="bi bi-shield-lock text-info me-2"></i>Security Analysis
                             </h5>
-                            <p class="text-muted small mb-0">Rule-based vulnerability assessment findings and risk analysis.</p>
+                            <p class="text-muted small mb-0">Rule-based assessment findings that indicate potential exposure, not proven exploitability.</p>
                         </div>
                         <div class="d-flex align-items-center gap-2">
-                            <span class="text-muted small">Overall Target Risk:</span>
+                            <span class="text-muted small">Rule-Based Risk Rating:</span>
                             {% if analysis_result.overall_risk == 'Critical' %}
                             <span class="badge badge-risk-critical px-3 py-2 fs-6 rounded-pill">
                                 <i class="bi bi-exclamation-octagon-fill me-1"></i>Critical Risk
@@ -405,7 +422,7 @@
       PURPOSE: Displays active scan metrics if available, or platform overview.
       =============================================================================
     -->
-    <div class="d-flex align-items-center justify-content-between mb-3">
+    <div class="d-flex align-items-center justify-content-between mb-3"{% if scan_result %} id="activeScanMetricsHeading"{% endif %}>
         <h6 class="text-muted fw-bold text-uppercase mb-0 fs-7 tracking-wider">
             <i class="bi bi-bar-chart-line me-1"></i> Assessment Metrics
         </h6>
@@ -420,7 +437,7 @@
         {% endif %}
     </div>
 
-    <div class="row g-4 mb-5">
+    <div class="row g-4 mb-5"{% if scan_result %} id="activeScanMetrics"{% endif %}>
         {% if scan_result %}
         <!-- Card 1: Open Ports -->
         <div class="col-sm-6 col-xl-3">
@@ -456,7 +473,7 @@
                 </div>
                 <div>
                     <div class="stat-number text-light fs-4 fw-bold">{{ analysis_result.overall_risk if analysis_result else 'N/A' }}</div>
-                    <p class="stat-label">Overall Risk Rating</p>
+                    <p class="stat-label">Rule-Based Risk Rating</p>
                 </div>
             </div>
         </div>
@@ -519,15 +536,15 @@
             </div>
         </div>
 
-        <!-- Metric Card 4: Assessment Engine Status -->
+        <!-- Metric Card 4: Configured assessment profile -->
         <div class="col-sm-6 col-xl-3">
             <div class="cyber-card p-3 d-flex align-items-center gap-3">
                 <div class="stat-icon-wrapper stat-icon-green">
                     <i class="bi bi-cpu"></i>
                 </div>
                 <div>
-                    <div class="stat-number text-light fs-5 text-success">Active</div>
-                    <p class="stat-label">Nmap Assessment Engine</p>
+                    <div class="stat-number text-light fs-5">Top 100 TCP</div>
+                    <p class="stat-label">Configured Scan Profile</p>
                 </div>
             </div>
         </div>
@@ -549,10 +566,28 @@
                 </h5>
                 <p class="text-muted small mb-0">Overview of recent target vulnerability scans and risk classifications saved in SQLite database.</p>
             </div>
-            <div>
+            <div class="d-flex flex-wrap align-items-center gap-2">
                 <span class="badge bg-secondary bg-opacity-25 text-light px-3 py-2 border border-secondary border-opacity-25">
                     <i class="bi bi-clock-history me-1"></i> Real Saved Scans
                 </span>
+                {% if recent_scans and recent_scans | length > 0 %}
+                <form action="{{ url_for('clear_scan_history_route') }}" method="POST" id="clearScanHistoryForm" class="d-inline">
+                    <input type="hidden" name="confirmed" value="1" disabled data-confirm-field>
+                    <button
+                        type="button"
+                        class="btn btn-sm btn-outline-danger rounded-pill px-3"
+                        data-confirm-modal
+                        data-confirm-form="clearScanHistoryForm"
+                        data-confirm-title="Clear Scan History"
+                        data-confirm-message="Delete all saved scan records?"
+                        data-confirm-supporting="This cannot be undone."
+                        data-confirm-action="Clear History"
+                    >
+                        <i class="bi bi-trash3 me-1" aria-hidden="true"></i>Clear Scan History
+                    </button>
+                    <noscript><button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-3">Clear Scan History</button></noscript>
+                </form>
+                {% endif %}
             </div>
         </div>
 
@@ -560,6 +595,7 @@
         <!-- Responsive Table Container -->
         <div class="table-responsive">
             <table class="table table-cyber align-middle mb-0">
+                <caption class="visually-hidden">Recent saved assessments with status, counts, rule-based risk, and available actions.</caption>
                 <thead>
                     <tr>
                         <th scope="col">Target</th>
@@ -625,10 +661,21 @@
                                 <a href="{{ url_for('view_scan', scan_id=scan.id) }}" class="btn btn-sm btn-outline-info rounded-pill px-3 py-1 fs-7 d-inline-flex align-items-center gap-1">
                                     <i class="bi bi-eye"></i> View
                                 </a>
-                                <form action="{{ url_for('delete_scan_route', scan_id=scan.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete scan #{{ scan.id }} for target {{ scan.target }}?');">
-                                    <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-2.5 py-1 fs-7 d-inline-flex align-items-center gap-1">
+                                <form action="{{ url_for('delete_scan_route', scan_id=scan.id) }}" method="POST" class="d-inline" id="deleteScanForm-{{ scan.id }}">
+                                    <input type="hidden" name="confirmed" value="1" disabled data-confirm-field>
+                                    <button
+                                        type="button"
+                                        class="btn btn-sm btn-outline-danger rounded-pill px-2.5 py-1 fs-7 d-inline-flex align-items-center gap-1"
+                                        data-confirm-modal
+                                        data-confirm-form="deleteScanForm-{{ scan.id }}"
+                                        data-confirm-title="Delete Saved Scan"
+                                        data-confirm-message="Delete this saved scan record?"
+                                        data-confirm-supporting="This cannot be undone."
+                                        data-confirm-action="Delete Scan"
+                                    >
                                         <i class="bi bi-trash"></i> Delete
                                     </button>
+                                    <noscript><button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-2.5 py-1 fs-7">Delete</button></noscript>
                                 </form>
                             </div>
                         </td>
@@ -640,10 +687,14 @@
         {% else %}
         <div class="alert alert-secondary bg-dark border border-secondary text-light p-4 text-center rounded-3 mb-0">
             <i class="bi bi-journal-x text-muted fs-2 d-block mb-2"></i>
-            <h6 class="fw-bold text-light">No saved scans yet</h6>
-            <p class="text-muted small mb-0">
-                Complete an authorized scan to create your first history record.
+            <h6 class="fw-bold text-light">No assessment history yet</h6>
+            <p class="text-muted small mb-3">
+                Saved assessments will appear here after you complete an authorized,
+                limited scan.
             </p>
+            <a class="btn btn-sm btn-outline-info rounded-pill px-3" href="#scanForm">
+                Enter your first authorized target
+            </a>
         </div>
         {% endif %}
     </div>
@@ -652,21 +703,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const scanForm = document.getElementById('scanForm');
-        const startBtn = document.getElementById('startScanBtn');
-        const btnIcon = document.getElementById('btnIcon');
-        const btnText = document.getElementById('btnText');
-
-        if (scanForm && startBtn) {
-            scanForm.addEventListener('submit', function() {
-                // Update button visual state when scan form is submitted
-                startBtn.disabled = true;
-                btnIcon.className = 'spinner-border spinner-border-sm';
-                btnText.textContent = 'Scanning...';
-            });
-        }
-    });
-</script>
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
 {% endblock %}
