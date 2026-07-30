@@ -7,15 +7,29 @@ The image installs both the Python `python-nmap` wrapper and the Linux Nmap
 executable. Scanning must only be performed against systems you own or have
 explicit authorization to assess.
 
-Set a strong Flask session secret in PowerShell before starting the service:
+SecureScan requires a strong Flask session secret. Environment variables set in
+PowerShell do not persist into a new PowerShell session, so set `SECRET_KEY`
+again whenever you open a new session before using Compose:
 
 ```powershell
 $env:SECRET_KEY = '<generate-a-long-random-value>'
 docker compose up --build -d
 ```
 
-Open the application at `http://127.0.0.1:5000` and check process health at
-`http://127.0.0.1:5000/health`.
+Alternatively, create a local Compose environment file from the safe placeholder:
+
+```powershell
+Copy-Item .env.example .env
+# Edit .env and replace the placeholder with a strong random value.
+docker compose up --build -d
+```
+
+The local `.env` file contains a secret, is ignored by Git, and must never be
+committed. The committed `.env.example` contains only a placeholder.
+
+Open the application at `http://127.0.0.1:5001` and check process health at
+`http://127.0.0.1:5001/health`. Host port 5001 avoids a common Windows port-5000
+conflict; Gunicorn continues to listen on port 5000 inside the container.
 
 Stop the service without removing saved scan history:
 

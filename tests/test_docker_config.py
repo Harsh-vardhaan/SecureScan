@@ -28,7 +28,7 @@ class TestDockerConfiguration(unittest.TestCase):
         compose = (PROJECT_ROOT / "docker-compose.yml").read_text(encoding="utf-8")
 
         self.assertIn("target: runtime", compose)
-        self.assertIn('"127.0.0.1:5000:5000"', compose)
+        self.assertIn('"127.0.0.1:5001:5000"', compose)
         self.assertIn("${SECRET_KEY:?", compose)
         self.assertIn("securescan-data:/app/data", compose)
         self.assertIn("SECURESCAN_DATABASE_PATH: /app/data/securescan.db", compose)
@@ -43,6 +43,17 @@ class TestDockerConfiguration(unittest.TestCase):
             self.assertIn(expected, dockerignore)
         self.assertNotIn("database/schema.sql", dockerignore)
         self.assertNotIn("requirements.txt", dockerignore)
+
+    def test_example_environment_file_contains_only_safe_placeholder(self):
+        example = (PROJECT_ROOT / ".env.example").read_text(encoding="utf-8").strip()
+        gitignore = (PROJECT_ROOT / ".gitignore").read_text(encoding="utf-8")
+
+        self.assertEqual(
+            example,
+            "SECRET_KEY=replace-with-a-strong-random-secret",
+        )
+        self.assertIn(".env.*", gitignore)
+        self.assertIn("!.env.example", gitignore)
 
     def test_requirements_file_is_utf8_and_pins_runtime_server(self):
         requirements = (PROJECT_ROOT / "requirements.txt").read_text(encoding="utf-8")

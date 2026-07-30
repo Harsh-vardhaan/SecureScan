@@ -27,7 +27,7 @@ COPY static ./static
 COPY templates ./templates
 COPY vulnerability ./vulnerability
 COPY tests ./tests
-COPY Dockerfile docker-compose.yml .dockerignore README.md ./
+COPY Dockerfile docker-compose.yml .dockerignore .gitignore .env.example README.md ./
 
 RUN python -m unittest discover -s tests -p "test_*.py"
 

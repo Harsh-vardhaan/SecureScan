@@ -2,6 +2,8 @@
 __pycache__/
 *.pyc
 .env
+.env.*
+!.env.example
 .vscode/
 .idea/
 
@@ -11,4 +13,4 @@ database/*.db-journal
 database/*.db-wal
 database/*.db-shm
 database/*.sqlite
-database/*.sqlite3
+database/*.sqlite3
