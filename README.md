@@ -1,5 +1,7 @@
 # SecureScan
 
+> **Stable portfolio release: v1.0.0**
+
 > A Flask-based, authorized vulnerability assessment platform that performs
 > controlled Nmap service discovery, applies transparent rule-based security
 > checks, preserves scan history in SQLite, and produces professional HTML and
@@ -22,6 +24,16 @@ vulnerability assessment application.
 > SecureScan must only be used against systems you own or have explicit
 > authorization to assess. The application requires users to confirm
 > authorization before a scan can begin.
+
+## Release Status
+
+SecureScan v1.0.0 is the stable portfolio release. See the
+[changelog](CHANGELOG.md) for delivered capabilities, security decisions, and
+known limitations.
+
+The application version is `1.0.0`. Reports use a separate internal
+report-format version, currently `1.0`, to identify their schema and layout;
+the report-format version is not the application release version.
 
 ## Key Features
 
@@ -71,7 +83,7 @@ rerun Nmap or the analyzer.
 SecureScan/
 ├── backend/                 # Flask application, configuration, and routes
 ├── database/                # SQLite access layer and schema
-├── docs/                    # Portfolio documentation and future images
+├── docs/                    # Architecture and sanitized portfolio images
 ├── reports/                 # Report normalization and PDF generation
 ├── scanner/                 # Target validation and Nmap integration
 ├── static/                  # Custom CSS and static asset directories
@@ -122,6 +134,8 @@ manager, then verify that the `nmap` executable is available on `PATH`.
 
 Docker Desktop on Windows must be running with Linux containers enabled.
 The image installs both the `python-nmap` wrapper and the Linux Nmap executable.
+Compose builds the runtime image with the release-oriented tag
+`securescan:1.0.0`.
 
 Set a strong Flask session secret before starting Compose:
 

@@ -1,6 +1,6 @@
 services:
   securescan:
-    image: securescan:phase8
+    image: securescan:1.0.0
     build:
       context: .
       target: runtime

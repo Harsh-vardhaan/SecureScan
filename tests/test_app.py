@@ -21,6 +21,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from backend.app import _env_flag, _local_port, app
+from backend.version import APP_VERSION
 from database.db import (
     DatabaseError,
     get_connection,
@@ -58,6 +59,10 @@ class TestFlaskRoutes(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn(b"SecureScan", response.data)
         self.assertIn(b"Automated Vulnerability Assessment", response.data)
+        self.assertEqual(APP_VERSION, "1.0.0")
+        self.assertEqual(app.config["APP_VERSION"], APP_VERSION)
+        self.assertIn(b"Vulnerability Scanner v1.0.0", response.data)
+        self.assertIn(b"Version 1.0.0", response.data)
 
     def test_dashboard_presents_bounded_scope_and_accessibility_landmarks(self):
         """Verify portfolio wording remains cautious and keyboard accessible."""

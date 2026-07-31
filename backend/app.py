@@ -17,6 +17,7 @@ import logging
 import re
 from io import BytesIO
 from flask import Flask, render_template, request, redirect, url_for, flash, abort, send_file, jsonify
+from backend.version import APP_VERSION
 
 # Calculate the absolute path to the root project directory (one level up from backend/)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -35,6 +36,8 @@ logger = logging.getLogger(__name__)
 
 # Initialize Flask application with explicit template and static folder locations
 app = Flask(__name__, template_folder=TEMPLATE_DIR, static_folder=STATIC_DIR)
+app.config["APP_VERSION"] = APP_VERSION
+app.jinja_env.globals["app_version"] = APP_VERSION
 
 # Secret key configuration for Flask flash message session signing
 # WARNING: The default 'dev-only-change-me' key is for local development only.
