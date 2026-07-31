@@ -1,0 +1,53 @@
+name: Feature request
+description: Propose an improvement that preserves SecureScan's authorized and bounded scope.
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: >-
+        SecureScan accepts only features consistent with authorized assessment,
+        bounded scanner behavior, non-exploitative analysis, and safe CI.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What user or project problem should be solved?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed feature
+      description: Describe the desired behavior and expected outcome.
+    validations:
+      required: true
+
+  - type: textarea
+    id: security_scope
+    attributes:
+      label: Security and scope impact
+      description: Explain effects on authorization, targets, scanner arguments, data handling, reports, and deployment.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternative approaches
+      description: Describe alternatives or workarounds considered.
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: boundaries
+    attributes:
+      label: Boundary confirmation
+      options:
+        - label: This proposal preserves explicit authorized-use boundaries.
+          required: true
+        - label: This proposal does not require exploitation or real network scanning in CI.
+          required: true

@@ -1,11 +1,25 @@
 .venv/
+venv/
 __pycache__/
 *.pyc
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
 .env
 .env.*
 !.env.example
 .vscode/
 .idea/
+.DS_Store
+Thumbs.db
+
+# Generated reports, logs, and temporary files
+reports/generated/
+*.pdf
+*.log
+*.tmp
+*.temp
 
 # SQLite Database files
 database/*.db

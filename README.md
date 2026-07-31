@@ -217,6 +217,20 @@ docker run --rm securescan:test
 
 No real Nmap target should be scanned during automated testing.
 
+## Continuous Integration
+
+GitHub Actions runs the unit suite on Python 3.11, 3.12, and 3.13, compiles the
+Python application packages, validates the Docker Compose configuration, and
+builds and executes the Docker test-stage image. CI uses synthetic environment
+values and temporary database storage. Scanner calls remain mocked, so the
+workflow does not perform real Nmap scans or contact scan targets.
+
+## Contributing
+
+Contributions are welcome when they preserve SecureScan's authorized-use and
+bounded-scanning design. Review [CONTRIBUTING.md](CONTRIBUTING.md) for setup,
+testing, security, privacy, and pull-request expectations.
+
 ## Example Workflow
 
 1. Start SecureScan locally or with Docker.
@@ -277,7 +291,6 @@ the analyzer.
 - Add optional CVE enrichment as a clearly separated, non-exploitative feature.
 - Add configurable, authorized scan profiles with strict allow-list validation.
 - Improve accessibility and live readiness reporting in the dashboard.
-- Add continuous integration for tests and Docker verification.
 - Add structured application metrics and operational observability.
 
 These are roadmap ideas, not current capabilities.
